@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Energy Analytics Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-bg: #f8fafc;
+            --secondary-bg: #ffffff;
+            --card-bg: #ffffff;
+            --header-bg: #f0f6fc;
+            --border-color: #e2e8f0;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --accent-blue: #0ea5e9;
+            --accent-sky: #06b6d4;
+            --accent-light-blue: #e0f2fe;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: var(--primary-bg);
+            color: var(--text-primary);
+        }
+
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: var(--secondary-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 24px 16px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: var(--shadow);
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 40px;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .nav-item {
+            padding: 12px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .nav-item:hover {
+            background: var(--accent-light-blue);
+            color: var(--accent-blue);
+        }
+
+        .nav-item.active {
+            background: var(--accent-light-blue);
+            color: var(--accent-blue);
+        }
+
+        .main-content {
+            margin-left: 260px;
+            width: calc(100% - 260px);
+            padding: 32px;
+            overflow-y: auto;
+            background: var(--primary-bg);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header h1 i {
+            color: var(--accent-blue);
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .refresh-btn {
+            padding: 10px 16px;
+            background: var(--accent-blue);
+            border: none;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            font-size: 13px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .refresh-btn:hover {
+            background: var(--accent-sky);
+            transform: translateY(-1px);
+        }
+
+        .refresh-btn.loading i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--success);
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .kpi-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .kpi-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent-blue);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .kpi-card:hover {
+            border-color: var(--accent-blue);
+            box-shadow: var(--shadow-md);
+        }
+
+        .kpi-card:hover::before {
+            opacity: 1;
+        }
+
+        .kpi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .kpi-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .kpi-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            background: var(--accent-light-blue);
+            color: var(--accent-blue);
+        }
+
+        .kpi-value {
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .kpi-change {
+            font-size: 12px;
+            color: var(--success);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 500;
+        }
+
+        .charts-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .chart-container {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .chart-container:hover {
+            border-color: var(--accent-blue);
+            box-shadow: var(--shadow-md);
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chart-title i {
+            color: var(--accent-blue);
+            font-size: 18px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 280px;
+        }
+
+        .chart-container.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .predictions-section {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 32px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            color: var(--accent-blue);
+            font-size: 20px;
+        }
+
+        .predictions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .prediction-stat {
+            background: var(--accent-light-blue);
+            border: 1px solid rgba(14, 165, 233, 0.2);
+            border-radius: 8px;
+            padding: 14px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .prediction-stat:hover {
+            border-color: var(--accent-blue);
+            box-shadow: var(--shadow-md);
+        }
+
+        .prediction-stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .prediction-stat-value {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        .predictions-table {
+            overflow-x: auto;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        thead {
+            background: var(--header-bg);
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        th {
+            padding: 12px 14px;
+            text-align: left;
+            color: var(--text-primary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            font-size: 12px;
+        }
+
+        td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        tbody tr:hover {
+            background: var(--accent-light-blue);
+        }
+
+        .status-badge-table {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        @media (max-width: 1200px) {
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 220px;
+                padding: 16px 12px;
+            }
+
+            .main-content {
+                margin-left: 220px;
+                width: calc(100% - 220px);
+                padding: 16px;
+            }
+
+            .header h1 {
+                font-size: 22px;
+            }
+
+            .kpi-section {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+
+            .predictions-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: static;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                padding: 12px;
+                margin-bottom: 10px;
+            }
+
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+                padding: 12px;
+            }
+
+            .header h1 {
+                font-size: 18px;
+            }
+
+            .sidebar-nav {
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .nav-item {
+                flex: 1;
+                min-width: calc(50% - 4px);
+                padding: 10px;
+                font-size: 12px;
+            }
+
+            .kpi-section {
+                grid-template-columns: 1fr;
+            }
+
+            .predictions-grid {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 11px;
+            }
+
+            th, td {
+                padding: 10px;
+            }
+
+            .chart-wrapper {
+                height: 200px;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(14, 165, 233, 0.3);
+            border-radius: 4px;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <div class="sidebar-brand">
+                <i class="fas fa-sun"></i>
+                <span>SolarHub</span>
+            </div>
+            <div class="sidebar-nav">
+                <div class="nav-item active" data-section="overview">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Overview</span>
+                </div>
+                <div class="nav-item" data-section="analytics">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Analytics</span>
+                </div>
+                <div class="nav-item" data-section="predictions">
+                    <i class="fas fa-wand-magic-sparkles"></i>
+                    <span>Predictions</span>
+                </div>
+                <div class="nav-item" data-section="history">
+                    <i class="fas fa-clock-rotate-left"></i>
+                    <span>History</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <div>
+                    <h1><i class="fas fa-solar-panel"></i>Solar Analytics</h1>
+                </div>
+                <div class="header-controls">
+                    <button class="refresh-btn" id="refreshBtn">
+                        <i class="fas fa-sync-alt"></i>
+                        <span>Refresh</span>
+                    </button>
+                    <div class="status-badge" id="statusBadge">
+                        <div class="status-dot"></div>
+                        <span>Live</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kpi-section">
+                <div class="kpi-card fade-in">
+                    <div class="kpi-header">
+                        <div class="kpi-title">⚡ Total Generation</div>
+                        <div class="kpi-icon"><i class="fas fa-bolt"></i></div>
+                    </div>
+                    <div class="kpi-value" id="kpiGeneration">-</div>
+                    <div class="kpi-change"><i class="fas fa-arrow-up"></i> <span id="kpiGenerationChange">-</span></div>
+                </div>
+
+                <div class="kpi-card fade-in">
+                    <div class="kpi-header">
+                        <div class="kpi-title">🔌 Total Consumption</div>
+                        <div class="kpi-icon"><i class="fas fa-plug"></i></div>
+                    </div>
+                    <div class="kpi-value" id="kpiConsumption">-</div>
+                    <div class="kpi-change"><i class="fas fa-arrow-up"></i> <span id="kpiConsumptionChange">-</span></div>
+                </div>
+
+                <div class="kpi-card fade-in">
+                    <div class="kpi-header">
+                        <div class="kpi-title">🌱 Self Sufficiency</div>
+                        <div class="kpi-icon"><i class="fas fa-leaf"></i></div>
+                    </div>
+                    <div class="kpi-value" id="kpiSelfSufficiency">-</div>
+                    <div class="kpi-change" id="kpiSelfSufficiencyChange">-</div>
+                </div>
+
+                <div class="kpi-card fade-in">
+                    <div class="kpi-header">
+                        <div class="kpi-title">🌡️ Avg Temperature</div>
+                        <div class="kpi-icon"><i class="fas fa-thermometer-half"></i></div>
+                    </div>
+                    <div class="kpi-value" id="kpiTemperature">-</div>
+                    <div class="kpi-change"><i class="fas fa-arrow-up"></i> <span id="kpiTemperatureChange">-</span></div>
+                </div>
+
+                <div class="kpi-card fade-in">
+                    <div class="kpi-header">
+                        <div class="kpi-title">✨ Predictions</div>
+                        <div class="kpi-icon"><i class="fas fa-star"></i></div>
+                    </div>
+                    <div class="kpi-value" id="kpiPredictions">-</div>
+                    <div class="kpi-change"><i class="fas fa-arrow-up"></i> <span id="kpiPredictionsChange">-</span></div>
+                </div>
+            </div>
+
+            <div class="charts-section">
+                <div class="chart-container full-width">
+                    <div class="chart-title">
+                        <i class="fas fa-chart-line"></i>
+                        Daily Generation vs Consumption
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="dailyChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-title">
+                        <i class="fas fa-chart-bar"></i>
+                        Monthly Generation
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-title">
+                        <i class="fas fa-sun"></i>
+                        Radiation vs Generation
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="radiationChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-title">
+                        <i class="fas fa-cloud"></i>
+                        Weather Distribution
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="weatherChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-title">
+                        <i class="fas fa-clock"></i>
+                        Hourly Pattern
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="hourlyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="predictions-section">
+                <div class="section-title">
+                    <i class="fas fa-brain"></i>
+                    ML Predictions Analytics
+                </div>
+
+                <div class="predictions-grid">
+                    <div class="prediction-stat">
+                        <div class="prediction-stat-label">Latest Prediction</div>
+                        <div class="prediction-stat-value" id="latestPrediction">-</div>
+                    </div>
+                    <div class="prediction-stat">
+                        <div class="prediction-stat-label">Today's Count</div>
+                        <div class="prediction-stat-value" id="todayPredictions">-</div>
+                    </div>
+                    <div class="prediction-stat">
+                        <div class="prediction-stat-label">Avg Generation</div>
+                        <div class="prediction-stat-value" id="avgPrediction">-</div>
+                    </div>
+                    <div class="prediction-stat">
+                        <div class="prediction-stat-label">Total Predictions</div>
+                        <div class="prediction-stat-value" id="totalPredictions">-</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">Recent Predictions</h3>
+                    <div class="predictions-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>🎯 ID</th>
+                                    <th>⚡ Predicted</th>
+                                    <th>☀️ Radiation</th>
+                                    <th>🌤️ Cloud %</th>
+                                    <th>🌡️ Temp</th>
+                                    <th>📍 Season</th>
+                                </tr>
+                            </thead>
+                            <tbody id="predictionsTableBody">
+                                <tr><td colspan="6" style="text-align: center; padding: 20px;">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chartColors = {
+            primary: '#0ea5e9',
+            secondary: '#06b6d4',
+            success: '#10b981',
+            warning: '#f59e0b'
+        };
+
+        let charts = {};
+
+        async function fetchDashboardData() {
+            try {
+                const response = await fetch('/api/dashboard-data');
+                const data = await response.json();
+                updateDashboard(data);
+                updateCharts(data);
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function updateDashboard(data) {
+            document.getElementById('kpiGeneration').textContent = data.total_generation.toFixed(2) + ' kWh';
+            document.getElementById('kpiGenerationChange').textContent = (data.generation_change * 100).toFixed(1) + '%';
+            document.getElementById('kpiConsumption').textContent = data.total_consumption.toFixed(2) + ' kWh';
+            document.getElementById('kpiConsumptionChange').textContent = (data.consumption_change * 100).toFixed(1) + '%';
+            document.getElementById('kpiSelfSufficiency').textContent = data.self_sufficiency.toFixed(1) + '%';
+            document.getElementById('kpiTemperature').textContent = data.avg_temperature.toFixed(1) + '°C';
+            document.getElementById('kpiTemperatureChange').textContent = (data.temperature_change > 0 ? '↑' : '↓') + ' ' + Math.abs(data.temperature_change).toFixed(2) + '°C';
+            document.getElementById('kpiPredictions').textContent = data.total_predictions;
+            document.getElementById('kpiPredictionsChange').textContent = data.predictions_made_today + ' today';
+        }
+
+        function updateCharts(data) {
+            if (charts.daily) charts.daily.destroy();
+            const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+            charts.daily = new Chart(dailyCtx, {
+                type: 'line',
+                data: {
+                    labels: data.daily_data.map(d => d.date),
+                    datasets: [
+                        {
+                            label: 'Generation (kWh)',
+                            data: data.daily_data.map(d => d.generation_kwh),
+                            borderColor: chartColors.primary,
+                            backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Consumption (kWh)',
+                            data: data.daily_data.map(d => d.consumption_kwh),
+                            borderColor: chartColors.warning,
+                            fill: false,
+                            tension: 0.4,
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: true } },
+                    scales: { y: { beginAtZero: true }, x: { grid: { display: false } } }
+                }
+            });
+
+            if (charts.monthly) charts.monthly.destroy();
+            const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+            charts.monthly = new Chart(monthlyCtx, {
+                type: 'bar',
+                data: {
+                    labels: data.monthly_data.map(d => d.month),
+                    datasets: [{ label: 'Generation (kWh)', data: data.monthly_data.map(d => d.generation_kwh), backgroundColor: chartColors.primary }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+
+            if (charts.radiation) charts.radiation.destroy();
+            const radiationCtx = document.getElementById('radiationChart').getContext('2d');
+            charts.radiation = new Chart(radiationCtx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Radiation vs Generation',
+                        data: data.radiation_data.map(d => ({x: d.radiation_kwh, y: d.generation_kwh})),
+                        backgroundColor: 'rgba(6, 182, 212, 0.6)',
+                        borderColor: chartColors.secondary,
+                        pointRadius: 5
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+
+            if (charts.weather) charts.weather.destroy();
+            const weatherCtx = document.getElementById('weatherChart').getContext('2d');
+            charts.weather = new Chart(weatherCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(data.weather_distribution),
+                    datasets: [{
+                        data: Object.values(data.weather_distribution),
+                        backgroundColor: ['#0ea5e9', '#06b6d4', '#10b981', '#f59e0b'],
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+
+            if (charts.hourly) charts.hourly.destroy();
+            const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+            charts.hourly = new Chart(hourlyCtx, {
+                type: 'line',
+                data: {
+                    labels: data.hourly_data.map(d => d.hour),
+                    datasets: [{
+                        label: 'Generation (kWh)',
+                        data: data.hourly_data.map(d => d.generation_kwh),
+                        borderColor: chartColors.primary,
+                        backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            document.getElementById('refreshBtn').classList.add('loading');
+            fetchDashboardData();
+            setTimeout(() => document.getElementById('refreshBtn').classList.remove('loading'), 1000);
+        });
+
+        fetchDashboardData();
+        setInterval(fetchDashboardData, 5000);
+    </script>
+</body>
+</html>
