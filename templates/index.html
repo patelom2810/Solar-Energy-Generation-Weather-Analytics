@@ -1,17 +1,36 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solar Energy Prediction</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
+
+        :root {
+            --primary-bg: #f8fafc;
+            --secondary-bg: #ffffff;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --accent-blue: #0ea5e9;
+            --accent-sky: #06b6d4;
+            --accent-light-blue: #e0f2fe;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+        }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: var(--primary-bg);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -20,19 +39,40 @@
         }
         
         .container {
-            background: white;
+            background: var(--card-bg);
             border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            box-shadow: var(--shadow-md);
             padding: 40px;
-            max-width: 500px;
+            max-width: 550px;
             width: 100%;
+            border: 1px solid var(--border-color);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--accent-light-blue);
         }
         
         h1 {
-            color: #333;
-            margin-bottom: 30px;
-            text-align: center;
+            color: var(--text-primary);
             font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        h1 i {
+            color: var(--accent-blue);
+            font-size: 32px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 8px;
         }
         
         form {
@@ -41,137 +81,270 @@
         }
         
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 18px;
         }
         
         label {
-            display: block;
-            margin-bottom: 5px;
-            color: #555;
-            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        label i {
+            color: var(--accent-blue);
+            width: 16px;
+            text-align: center;
         }
         
         input[type="number"], select {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
+            padding: 12px 14px;
+            border: 1px solid var(--border-color);
             border-radius: 6px;
             font-size: 14px;
-            transition: border-color 0.3s;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+            background: var(--secondary-bg);
         }
         
         input[type="number"]:focus, select:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px var(--accent-light-blue);
+            background: var(--secondary-bg);
         }
         
         .checkbox-group {
             display: flex;
             align-items: center;
-            margin-bottom: 15px;
+            gap: 10px;
+            margin-bottom: 18px;
+            padding: 12px 14px;
+            background: var(--accent-light-blue);
+            border-radius: 6px;
+            border: 1px solid rgba(14, 165, 233, 0.2);
         }
         
         input[type="checkbox"] {
-            margin-right: 10px;
             width: 18px;
             height: 18px;
             cursor: pointer;
+            accent-color: var(--accent-blue);
         }
         
         .checkbox-group label {
             margin: 0;
             cursor: pointer;
             font-weight: 500;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .checkbox-group label i {
+            color: var(--accent-blue);
         }
         
         button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--accent-blue);
             color: white;
-            padding: 12px;
+            padding: 14px;
             border: none;
             border-radius: 6px;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.2s ease;
             margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: var(--shadow-md);
         }
         
         button:hover {
+            background: var(--accent-sky);
             transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 6px 12px rgba(14, 165, 233, 0.3);
         }
         
         button:active {
             transform: translateY(0);
         }
+
+        button i {
+            font-size: 16px;
+        }
         
         #result {
-            margin-top: 30px;
-            padding: 20px;
-            background: #f0f4ff;
-            border-left: 4px solid #667eea;
+            margin-top: 24px;
+            padding: 16px;
+            background: var(--accent-light-blue);
+            border: 1px solid rgba(14, 165, 233, 0.3);
+            border-left: 4px solid var(--accent-blue);
             border-radius: 6px;
-            color: #333;
-            font-size: 16px;
+            color: var(--text-primary);
+            font-size: 15px;
             display: none;
+            line-height: 1.6;
         }
         
         #result.show {
             display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
-        .status-normal {
-            color: #27ae60;
-            font-weight: 600;
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            font-weight: 500;
+        }
+
+        .result-value {
+            color: var(--accent-blue);
+            font-weight: 700;
         }
         
-        .status-fraud {
-            color: #e74c3c;
+        .status-success {
+            color: var(--success);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-warning {
+            color: var(--warning);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: var(--accent-blue);
+        }
+
+        .loading i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 13px;
+        }
+
+        .back-link a {
+            color: var(--accent-blue);
+            text-decoration: none;
             font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .back-link a:hover {
+            gap: 12px;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 24px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            .form-group {
+                margin-bottom: 14px;
+            }
+
+            input[type="number"], select {
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+
+            button {
+                padding: 12px;
+                font-size: 14px;
+            }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>☀️ Solar Energy Predictor</h1>
+    <div class="header">
+        <h1><i class="fas fa-wand-magic-sparkles"></i> Solar Predictor</h1>
+        <p class="subtitle">AI-powered energy generation forecast</p>
+    </div>
 
     <form id="predict-form">
         
         <div class="form-group">
-            <label for="rad">Shortwave Radiation (W/m²)</label>
+            <label for="rad"><i class="fas fa-sun"></i> Shortwave Radiation (W/m²)</label>
             <input type="number" id="rad" placeholder="e.g., 24" step="0.01" required>
         </div>
 
         <div class="form-group">
-            <label for="sun">Sunshine Duration (seconds)</label>
+            <label for="sun"><i class="fas fa-sun"></i> Sunshine Duration (seconds)</label>
             <input type="number" id="sun" placeholder="e.g., 38000" required>
         </div>
 
         <div class="form-group">
-            <label for="cloud">Cloud Cover (%)</label>
+            <label for="cloud"><i class="fas fa-cloud"></i> Cloud Cover (%)</label>
             <input type="number" id="cloud" placeholder="e.g., 30" step="0.1" required>
         </div>
 
         <div class="form-group">
-            <label for="temp">Temperature 2m (°C)</label>
+            <label for="temp"><i class="fas fa-thermometer-half"></i> Temperature 2m (°C)</label>
             <input type="number" id="temp" placeholder="e.g., 26" step="0.1" required>
         </div>
 
         <div class="form-group">
-            <label for="wind">Wind Speed 10m (km/h)</label>
+            <label for="wind"><i class="fas fa-wind"></i> Wind Speed 10m (m/s)</label>
             <input type="number" id="wind" placeholder="e.g., 18" step="0.1" required>
         </div>
 
         <div class="form-group">
-            <label for="rain">Rain Sum (mm)</label>
+            <label for="rain"><i class="fas fa-droplet"></i> Rain Sum (mm)</label>
             <input type="number" id="rain" placeholder="e.g., 0" step="0.1" required>
         </div>
 
         <div class="form-group">
-            <label for="season">Season</label>
+            <label for="season"><i class="fas fa-leaf"></i> Season</label>
             <select id="season" required>
                 <option value="Dry">Dry</option>
                 <option value="Wet">Wet</option>
@@ -180,14 +353,18 @@
 
         <div class="checkbox-group">
             <input type="checkbox" id="weekend">
-            <label for="weekend">Is Weekend?</label>
+            <label for="weekend"><i class="fas fa-calendar"></i> Weekend</label>
         </div>
 
-        <button type="submit">🔮 Predict Energy Generation</button>
+        <button type="submit"><i class="fas fa-bolt"></i> Predict Energy Generation</button>
 
     </form>
 
     <div id="result"></div>
+
+    <div class="back-link">
+        <a href="/dashboard"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+    </div>
 </div>
 
 <script>
@@ -198,7 +375,7 @@ document.getElementById('predict-form')
     e.preventDefault();
     
     const resultDiv = document.getElementById('result');
-    resultDiv.textContent = 'Loading...';
+    resultDiv.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i> Processing...</div>';
     resultDiv.classList.add('show');
 
     const payload = {
@@ -223,13 +400,24 @@ document.getElementById('predict-form')
 
         const data = await res.json();
         
-        const statusClass = data.status === 'Fraud' ? 'status-fraud' : 'status-normal';
+        const statusClass = data.status === 'Fraud' ? 'status-warning' : 'status-success';
+        const statusIcon = data.status === 'Fraud' ? 'fa-exclamation-circle' : 'fa-check-circle';
+        
         resultDiv.innerHTML = `
-            <strong>Predicted Generation:</strong> ${data.predicted_generation_kwh} kWh<br>
-            <strong>Status:</strong> <span class="${statusClass}">${data.status}</span>
+            <div class="result-item">
+                <span><i class="fas fa-bolt"></i> Predicted Generation:</span>
+                <span class="result-value">${data.predicted_generation_kwh} kWh</span>
+            </div>
+            <div class="result-item">
+                <span><i class="fas fa-info-circle"></i> Status:</span>
+                <span class="${statusClass}"><i class="fas ${statusIcon}"></i> ${data.status}</span>
+            </div>
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(14, 165, 233, 0.2); font-size: 12px; color: #64748b;">
+                <i class="fas fa-check"></i> Prediction saved to database
+            </div>
         `;
     } catch (error) {
-        resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+        resultDiv.innerHTML = `<div style="color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Error: ${error.message}</div>`;
     }
 });
 
