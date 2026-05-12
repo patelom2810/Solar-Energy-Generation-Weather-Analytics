@@ -356,6 +356,117 @@ By Cloud Cover:
 - [Scikit-learn Regression](https://scikit-learn.org/stable/modules/ensemble.html#random-forests)
 - [MySQL Python Connector](https://dev.mysql.com/doc/connector-python/en/)
 
+## ⚠️ Limitations & Future Improvements
+
+### Current Limitations
+
+#### 📊 Limited Dataset Size
+- **Current Data**: Only 89-91 merged daily records (~3 months of data)
+- **Impact**: ML model trained on small dataset (R² = 0.2808)
+- **Recommendation**: Collect 12+ months of historical data (365+ samples) for robust model
+- **Target**: Aim for 3+ years of data for seasonal pattern recognition
+
+#### 🗓️ Seasonal Data Limitations
+- **Gap**: Dataset covers limited seasons/weather patterns
+- **Missing**: 
+  - Extreme weather events (heavy rain, storms)
+  - Winter performance data
+  - Temperature extremes (very hot/cold days)
+  - Monsoon season variations
+- **Effect**: Model may not generalize well to unseen seasonal patterns
+- **Solution**: Expand dataset to cover all seasons across multiple years
+
+#### 🎯 Model Scope Constraints
+- **Current Features**: Only 5 base weather parameters + 5 engineered features
+- **Missing Predictors**:
+  - Cloud type classification (stratocumulus vs cirrus)
+  - Atmospheric pressure and humidity
+  - Solar panel temperature
+  - Equipment efficiency degradation over time
+  - Soiling and dust accumulation
+  - Snow cover (seasonal)
+- **Opportunity**: Incorporate hourly data for intra-day predictions
+
+### 🚀 Future Enhancement Ideas
+
+#### Phase 1: Data & Model Improvements (High Priority)
+1. **Expand Historical Dataset**
+   - Collect 3+ years of daily records
+   - Include multiple climate zones/seasons
+   - Add extreme weather events documentation
+   - Target: 1000+ samples for production-grade model
+
+2. **Add Feature Engineering**
+   - Day-of-year (captures seasonal cycles)
+   - Moving averages (7-day, 30-day trends)
+   - Lag features (yesterday's generation impact)
+   - Weather gradients (rate of change)
+   - Equipment age/degradation factor
+
+3. **Model Upgrading**
+   - Try XGBoost, LightGBM for better performance
+   - Implement gradient boosting with time-series CV
+   - A/B test ensemble methods (stacking, voting)
+   - Hyperparameter tuning with grid/random search
+   - Target: R² > 0.7 for production readiness
+
+#### Phase 2: Advanced Analytics (Medium Priority)
+4. **Time-Series Forecasting**
+   - Implement ARIMA/SARIMA for temporal patterns
+   - Add Prophet for seasonal decomposition
+   - Support multi-step ahead forecasting (7-14 day outlook)
+
+5. **Anomaly Detection**
+   - Identify equipment malfunctions via deviation analysis
+   - Detect abnormal weather events
+   - Alert system for critical underperformance
+
+6. **Hourly-Level Predictions**
+   - Migrate from daily to hourly predictions
+   - Support 24-hour rolling forecasts
+   - Optimize for grid demand matching
+
+#### Phase 3: Enterprise Features (Lower Priority)
+7. **Real-Time Data Integration**
+   - Connect to live weather APIs (OpenWeatherMap, WeatherAPI)
+   - Stream predictions to IoT devices
+   - Live generation monitoring dashboard
+
+8. **Multi-Site Support**
+   - Handle multiple solar installations
+   - Location-specific model training
+   - Regional performance comparison
+
+9. **Advanced Visualizations**
+   - 3D surface plots (radiation vs cloud vs generation)
+   - Real-time prediction confidence intervals
+   - Forecast accuracy heatmaps
+   - ROI calculator for installations
+
+10. **Deployment Optimization**
+    - Model quantization for edge devices
+    - API response optimization
+    - Caching strategy for frequent predictions
+    - Docker containerization
+
+### 📈 Expected Improvements by Phase
+
+| Phase | Timeline | R² Score | MAE | Use Case |
+|-------|----------|----------|-----|----------|
+| Current | Now | 0.28 | 4.84 kWh | Prototype/PoC |
+| Phase 1 | 3-4 months | 0.65-0.75 | 1.5-2.5 kWh | Production Ready |
+| Phase 2 | 4-6 months | 0.80-0.85 | 0.8-1.2 kWh | Advanced Analytics |
+| Phase 3 | 6-12 months | 0.85+ | <0.8 kWh | Enterprise Solution |
+
+### 🎯 Recommended Priority Path
+1. ✅ **Start**: Collect 12 months of clean historical data
+2. ⏭️ **Next**: Implement feature engineering (day-of-year, moving averages)
+3. ⏭️ **Then**: Retrain model with XGBoost on expanded dataset
+4. ⏭️ **Later**: Add time-series forecasting capabilities
+5. ⏭️ **Future**: Implement real-time integration and enterprise features
+
+---
+
 ## 📄 License
 
 This project is licensed under the MIT License - see LICENSE file for details.
