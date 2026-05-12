@@ -112,10 +112,6 @@ def dashboard():
     """Render the modern analytics dashboard"""
     return render_template('dashboard.html')
 
-@app.route('/model-score')
-def model_score_page():
-    """Render the model performance page"""
-    return render_template('model_score.html')
 
 @app.route('/api/dashboard-data')
 def api_dashboard_data():

@@ -1,24 +1,32 @@
-# ☀️ Solar Energy Analytics Dashboard
+# <i class="fas fa-sun"></i> Solar Energy Analytics Dashboard
 
 > **A modern, responsive solar energy analytics platform combining historical CSV data visualization with real-time ML prediction storage and real-time database retrieval.**
 
-## 🌟 Features
+## <i class="fas fa-star"></i> Features
 
-### 📊 Real-Time Dashboard
+### <i class="fas fa-chart-line"></i> Real-Time Dashboard
+
+
+![Real-Time Dashboard](images/1.png)
+*The main dashboard provides a comprehensive view of solar generation and consumption metrics. It features real-time KPI tracking, dynamic charts for historical patterns, and weather correlation analysis for deep insights into system performance.*
 - **5 Key Performance Indicator (KPI) Cards** - Track generation, consumption, efficiency, temperature, and predictions
 - **5 Interactive Charts** - Visualize daily trends, monthly patterns, radiation correlation, weather distribution, and hourly generation patterns
 - **Auto-Refresh Mechanism** - Data updates every 5 seconds for real-time insights
 - **Responsive Design** - Works seamlessly on desktop (1200px+), tablet (768px), and mobile (640px)
 - **PowerBI-Style Theme** - Professional white and baby blue color scheme with intuitive UI
 
-### 🤖 ML-Powered Predictions
+### <i class="fas fa-robot"></i> ML-Powered Predictions
+
+
+![ML Predictions Analytics](images/2.png)
+*The ML Predictions section monitors the effectiveness of our forecasting models. It tracks the latest prediction values, daily prediction counts, and calculates real-time accuracy scores based on historical data comparisons.*
 - **Solar Generation Forecasting** - Predict hourly energy generation based on weather parameters
 - **Weather-Based Analysis** - Input radiation, cloud cover, temperature, wind speed, and precipitation
 - **Database Storage** - All predictions logged to MySQL with weather conditions and metadata
 - **Historical Analysis** - Track prediction accuracy, seasonal patterns, and weather correlations
 - **Comprehensive Metrics** - Average generation, min/max ranges, seasonal breakdown, and cloud impact analysis
 
-### 📈 Analytics & Insights
+### <i class="fas fa-chart-bar"></i> Analytics & Insights
 - **Daily vs Consumption Analysis** - Compare generation against consumption patterns
 - **Monthly Aggregations** - Track performance trends across 12-month periods
 - **Weather Distribution** - Visualize weather code frequency and patterns
@@ -26,7 +34,7 @@
 - **Hourly Patterns** - Understand 24-hour generation cycles
 - **Database Statistics** - Real-time prediction stats and historical tracking
 
-## 🛠️ Tech Stack
+## <i class="fas fa-wrench"></i> Tech Stack
 
 | Component | Technology | Version |
 |-----------|-----------|---------|
@@ -41,31 +49,31 @@
 | **Frontend** | HTML5/CSS3/ES6+ | - |
 | **Icons** | Font Awesome | 6.4.0 |
 
-## 📦 Installation
+## <i class="fas fa-box"></i> Installation
 
 ### Prerequisites
 - Python 3.12+
 - MySQL 8.0+
 - pip package manager
 
-### 1️⃣ Clone Repository
+### <i class="fas fa-1"></i> Clone Repository
 ```bash
 git clone https://github.com/patelom2810/Solar-Energy-Generation-Weather-Analytics.git
 cd solar_analytics
 ```
 
-### 2️⃣ Create Virtual Environment
+### <i class="fas fa-2"></i> Create Virtual Environment
 ```bash
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-### 3️⃣ Install Dependencies
+### <i class="fas fa-3"></i> Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4️⃣ Configure Environment
+### <i class="fas fa-4"></i> Configure Environment
 Create `.env` file in project root:
 ```env
 DB_HOST=localhost
@@ -76,19 +84,19 @@ DB_PORT=3306
 FLASK_ENV=development
 ```
 
-### 5️⃣ Initialize Database
+### <i class="fas fa-5"></i> Initialize Database
 ```bash
 # MySQL must be running
 python3 -c "from appsql import init_db; init_db()"
 ```
 
-### 6️⃣ Start Flask Server
+### <i class="fas fa-6"></i> Start Flask Server
 ```bash
 python3 app.py
 ```
 Server runs on `http://127.0.0.1:8000`
 
-## 🚀 Usage
+## <i class="fas fa-rocket"></i> Usage
 
 ### Access Dashboard
 1. Open browser: **http://127.0.0.1:8000/dashboard**
@@ -96,27 +104,31 @@ Server runs on `http://127.0.0.1:8000`
 3. Data auto-refreshes every 5 seconds
 
 ### Make Predictions
+
+
+![Solar Predictor](images/4.png)
+*The intuitive Predictor Form allows users to forecast solar generation based on custom weather parameters. It supports various inputs such as radiation, cloud cover, and temperature to immediately calculate an expected energy yield.*
 1. Navigate to: **http://127.0.0.1:8000** (Predictor Form)
 2. Fill in weather parameters:
-   - ☀️ Shortwave Radiation (W/m²)
-   - 🌤️ Sunshine Duration (seconds)
-   - ☁️ Cloud Cover (0-100%)
-   - 🌡️ Temperature 2m (°C)
-   - 💨 Wind Speed 10m (m/s)
-   - 💧 Rain Sum (mm)
-   - 📍 Season (Dry/Wet)
-   - 📅 Weekend (Yes/No)
+   - <i class="fas fa-sun"></i> Shortwave Radiation (W/m²)
+   - <i class="fas fa-cloud-sun"></i> Sunshine Duration (seconds)
+   - <i class="fas fa-cloud"></i> Cloud Cover (0-100%)
+   - <i class="fas fa-temperature-high"></i> Temperature 2m (°C)
+   - <i class="fas fa-wind"></i> Wind Speed 10m (m/s)
+   - <i class="fas fa-cloud-rain"></i> Rain Sum (mm)
+   - <i class="fas fa-map-marker-alt"></i> Season (Dry/Wet)
+   - <i class="fas fa-calendar-alt"></i> Weekend (Yes/No)
 3. Click **Predict** to generate forecast and store in database
 
 ### API Endpoints
 
-#### 📊 Get Dashboard Data
+#### <i class="fas fa-chart-line"></i> Get Dashboard Data
 ```bash
 GET /api/dashboard-data
 ```
 Returns: KPIs, historical data, charts data, and prediction statistics
 
-#### 🔮 Make Prediction
+#### <i class="fas fa-magic"></i> Make Prediction
 ```bash
 POST /predict
 Content-Type: application/json
@@ -133,17 +145,23 @@ Content-Type: application/json
 }
 ```
 
-#### 📈 Get Prediction History
+#### <i class="fas fa-chart-bar"></i> Get Prediction History
 ```bash
-GET /api/history?limit=100
+GET /history?limit=100
 ```
 
-#### 📊 Get Statistics
+#### <i class="fas fa-chart-line"></i> Get Statistics
 ```bash
-GET /api/stats
+GET /stats
 ```
 
-## 📊 Data Sources
+#### <i class="fas fa-flask"></i> Get Model Score Metrics
+```bash
+GET /api/model-score
+```
+Returns: R², MAE, RMSE, MAPE, feature importances, and sample predictions
+
+## <i class="fas fa-database"></i> Data Sources
 
 ### Historical Data (CSV)
 - **fact_solar_daily.csv** - Daily solar generation and consumption data
@@ -172,10 +190,14 @@ CREATE TABLE prediction_logs (
 )
 ```
 
-## 🧠 ML Model
+## <i class="fas fa-brain"></i> ML Model
+
+
+![Model Performance Metrics](images/3.png)
+*The Model Performance dashboard provides an in-depth look at our Gradient Boosting Regressor's accuracy. It visualizes key metrics like R² Score, feature importances, and a scatter plot of predicted versus actual generation to ensure high-reliability forecasting.*
 
 ### Model Architecture
-- **Algorithm**: Random Forest Regressor (Scikit-learn)
+- **Algorithm**: Gradient Boosting Regressor (Scikit-learn)
 - **Training Data**: Historical solar generation with weather features
 - **Features** (10): 
   - Shortwave Radiation Sum
@@ -191,7 +213,7 @@ CREATE TABLE prediction_logs (
 
 ### Model Performance
 ```
-✅ Test Results Across Various Scenarios:
+<i class="fas fa-check-circle"></i> Test Results Across Various Scenarios:
 
 Scenario              Prediction    Cloud    Temperature
 ────────────────────────────────────────────────────────
@@ -211,7 +233,7 @@ Average: 30.28 kWh | Range: 19.86 - 43.64 kWh | StdDev: 9.28 kWh
 - ✓ **Temperature Correlation**: Warm days (25-30°C) generate more consistently
 - ✓ **Weather Sensitivity**: Model accurately responds to all weather parameters
 
-## 📁 Project Structure
+## <i class="fas fa-folder"></i> Project Structure
 
 ```
 solar_analytics/
@@ -241,7 +263,7 @@ solar_analytics/
     └── index.html                 # Predictor form
 ```
 
-## 🔧 Configuration
+## <i class="fas fa-gear"></i> Configuration
 
 ### Environment Variables (`.env`)
 ```env
@@ -266,7 +288,7 @@ app.run(
 )
 ```
 
-## 🐛 Troubleshooting
+## <i class="fas fa-bug"></i> Troubleshooting
 
 ### MySQL Connection Issues
 ```bash
@@ -307,7 +329,7 @@ mysql -u root -p solar_analytics
 SHOW TABLES;
 ```
 
-## 📊 Prediction Accuracy Metrics
+## <i class="fas fa-database"></i> Prediction Accuracy Metrics
 
 ```
 Database Analysis (10+ Predictions Stored):
@@ -328,45 +350,25 @@ By Cloud Cover:
   Cloudy (60-80%): 2 preds, Avg 25.41 kWh
 ```
 
-## 🎨 UI/UX Features
 
-### 🎭 Design System
-- **Color Palette**: White (#f8fafc), Baby Blue (#0ea5e9), Sky Blue (#06b6d4)
-- **Typography**: System fonts (-apple-system, BlinkMacSystemFont, Segoe UI)
-- **Spacing**: 8px base unit for consistent rhythm
-- **Shadows**: Subtle shadows for depth perception
-- **Animations**: Smooth transitions and loading states
-
-### 📱 Responsive Breakpoints
-- **Desktop**: 1200px+ (Full layout with sidebar)
-- **Tablet**: 768px - 1200px (Optimized 2-column grids)
-- **Mobile**: < 640px (Single column, horizontal navigation)
-
-### ♿ Accessibility
-- Semantic HTML5 structure
-- ARIA labels for screen readers
-- Keyboard navigation support
-- High contrast text for readability
-- Font Awesome icons with text labels
-
-## 📚 Learning Resources
+## <i class="fas fa-book"></i> Learning Resources
 
 - [Flask Documentation](https://flask.palletsprojects.com/)
 - [Chart.js Documentation](https://www.chartjs.org/)
 - [Scikit-learn Regression](https://scikit-learn.org/stable/modules/ensemble.html#random-forests)
 - [MySQL Python Connector](https://dev.mysql.com/doc/connector-python/en/)
 
-## ⚠️ Limitations & Future Improvements
+## <i class="fas fa-exclamation-triangle"></i> Limitations & Future Improvements
 
 ### Current Limitations
 
-#### 📊 Limited Dataset Size
+#### <i class="fas fa-chart-line"></i> Limited Dataset Size
 - **Current Data**: Only 89-91 merged daily records (~3 months of data)
 - **Impact**: ML model trained on small dataset (R² = 0.2808)
 - **Recommendation**: Collect 12+ months of historical data (365+ samples) for robust model
 - **Target**: Aim for 3+ years of data for seasonal pattern recognition
 
-#### 🗓️ Seasonal Data Limitations
+#### <i class="fas fa-calendar"></i> Seasonal Data Limitations
 - **Gap**: Dataset covers limited seasons/weather patterns
 - **Missing**: 
   - Extreme weather events (heavy rain, storms)
@@ -376,7 +378,7 @@ By Cloud Cover:
 - **Effect**: Model may not generalize well to unseen seasonal patterns
 - **Solution**: Expand dataset to cover all seasons across multiple years
 
-#### 🎯 Model Scope Constraints
+#### <i class="fas fa-bullseye"></i> Model Scope Constraints
 - **Current Features**: Only 5 base weather parameters + 5 engineered features
 - **Missing Predictors**:
   - Cloud type classification (stratocumulus vs cirrus)
@@ -387,7 +389,7 @@ By Cloud Cover:
   - Snow cover (seasonal)
 - **Opportunity**: Incorporate hourly data for intra-day predictions
 
-### 🚀 Future Enhancement Ideas
+### <i class="fas fa-rocket"></i> Future Enhancement Ideas
 
 #### Phase 1: Data & Model Improvements (High Priority)
 1. **Expand Historical Dataset**
@@ -449,7 +451,7 @@ By Cloud Cover:
     - Caching strategy for frequent predictions
     - Docker containerization
 
-### 📈 Expected Improvements by Phase
+### <i class="fas fa-chart-bar"></i> Expected Improvements by Phase
 
 | Phase | Timeline | R² Score | MAE | Use Case |
 |-------|----------|----------|-----|----------|
@@ -458,48 +460,48 @@ By Cloud Cover:
 | Phase 2 | 4-6 months | 0.80-0.85 | 0.8-1.2 kWh | Advanced Analytics |
 | Phase 3 | 6-12 months | 0.85+ | <0.8 kWh | Enterprise Solution |
 
-### 🎯 Recommended Priority Path
-1. ✅ **Start**: Collect 12 months of clean historical data
-2. ⏭️ **Next**: Implement feature engineering (day-of-year, moving averages)
-3. ⏭️ **Then**: Retrain model with XGBoost on expanded dataset
-4. ⏭️ **Later**: Add time-series forecasting capabilities
-5. ⏭️ **Future**: Implement real-time integration and enterprise features
+### <i class="fas fa-bullseye"></i> Recommended Priority Path
+1. <i class="fas fa-check-circle"></i> **Start**: Collect 12 months of clean historical data
+2. <i class="fas fa-step-forward"></i> **Next**: Implement feature engineering (day-of-year, moving averages)
+3. <i class="fas fa-step-forward"></i> **Then**: Retrain model with XGBoost on expanded dataset
+4. <i class="fas fa-step-forward"></i> **Later**: Add time-series forecasting capabilities
+5. <i class="fas fa-step-forward"></i> **Future**: Implement real-time integration and enterprise features
 
 ---
 
-## 📄 License
+## <i class="fas fa-file-alt"></i> License
 
 This project is licensed under the MIT License - see LICENSE file for details.
 
-## 👤 Author
+## <i class="fas fa-user"></i> Author
 
 **Om Patel**
-- 📧 Email: patelom2810@gmail.com
-- 🔗 GitHub: [@patelom2810](https://github.com/patelom2810)
+- <i class="fas fa-envelope"></i> Email: patelom2810@gmail.com
+- <i class="fas fa-link"></i> GitHub: [@patelom2810](https://github.com/patelom2810)
 
-## 🙏 Acknowledgments
+## <i class="fas fa-hands-helping"></i> Acknowledgments
 
-- ☀️ Solar energy data from [OpenMeteo API](https://open-meteo.com/)
+- <i class="fas fa-sun"></i> Solar energy data from [OpenMeteo API](https://open-meteo.com/)
 - 📊 Chart visualization by [Chart.js](https://www.chartjs.org/)
 - 🎨 Icons by [Font Awesome](https://fontawesome.com/)
 - 🤖 ML framework by [Scikit-learn](https://scikit-learn.org/)
 
-## 🚦 Status
+## <i class="fas fa-traffic-light"></i> Status
 
-✅ **Dashboard**: Production Ready  
-✅ **API Endpoints**: Fully Functional  
-✅ **ML Model**: Validated & Tested  
-✅ **Database**: MySQL Connected  
-✅ **Documentation**: Complete  
+<i class="fas fa-check-circle"></i> **Dashboard**: Production Ready  
+<i class="fas fa-check-circle"></i> **API Endpoints**: Fully Functional  
+<i class="fas fa-check-circle"></i> **ML Model**: Validated & Tested  
+<i class="fas fa-check-circle"></i> **Database**: MySQL Connected  
+<i class="fas fa-check-circle"></i> **Documentation**: Complete  
 
 ---
 
 <div align="center">
 
-### ⭐ If you find this project helpful, please consider giving it a star!
+### <i class="fas fa-star"></i> If you find this project helpful, please consider giving it a star!
 
 **[View Live Dashboard](http://127.0.0.1:8000/dashboard)** | **[Report Issue](https://github.com/patelom2810/Solar-Energy-Generation-Weather-Analytics/issues)** | **[Make Prediction](http://127.0.0.1:8000/)**
 
-**Last Updated**: May 2026 | **Version**: 1.0.0 🚀
+**Last Updated**: May 2026 | **Version**: 1.0.0 <i class="fas fa-rocket"></i>
 
 </div>
