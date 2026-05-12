@@ -9,14 +9,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-dark: #0f172a;
-            --bg-card: rgba(30, 41, 59, 0.7);
-            --bg-input: rgba(15, 23, 42, 0.6);
-            --border-glass: rgba(255, 255, 255, 0.08);
+            --bg-dark: #ffffff;
+            --bg-card: #ffffff;
+            --bg-input: #f3f4f6;
+            --border-glass: rgba(0, 0, 0, 0.1);
             --accent-cyan: #06b6d4;
             --accent-blue: #3b82f6;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
             --success: #10b981;
             --warning: #f59e0b;
         }
@@ -25,8 +25,8 @@
 
         body {
             font-family: 'Outfit', sans-serif;
-            background: #0f172a;
-            background-image: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
+            background: #ffffff;
+            background-image: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
             background-attachment: fixed;
             color: var(--text-main);
             min-height: 100vh;
@@ -40,44 +40,18 @@
 
 
         .clouds-bg {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: -1; overflow: hidden; pointer-events: none;
-        }
-        .cloud {
-            position: absolute; background: rgba(255, 255, 255, 0.03);
-            border-radius: 100px; filter: blur(4px);
-        }
-        .cloud::before, .cloud::after {
-            content: ''; position: absolute; background: rgba(255, 255, 255, 0.03); border-radius: 50%;
-        }
-        .cloud1 { width: 300px; height: 100px; top: 20%; left: -300px; animation: floatCloud 45s linear infinite; }
-        .cloud1::before { width: 150px; height: 150px; top: -60px; left: 40px; }
-        .cloud1::after { width: 120px; height: 120px; top: -40px; left: 140px; }
-
-        .cloud2 { width: 250px; height: 80px; top: 60%; left: -250px; animation: floatCloud 35s linear infinite; animation-delay: -10s; }
-        .cloud2::before { width: 120px; height: 120px; top: -50px; left: 30px; }
-        .cloud2::after { width: 100px; height: 100px; top: -30px; left: 110px; }
-
-        .cloud3 { width: 400px; height: 120px; top: 85%; left: -400px; animation: floatCloud 55s linear infinite; animation-delay: -25s; }
-        .cloud3::before { width: 180px; height: 180px; top: -80px; left: 60px; }
-        .cloud3::after { width: 140px; height: 140px; top: -50px; left: 200px; }
-
-        @keyframes floatCloud {
-            0% { transform: translateX(-10vw); }
-            100% { transform: translateX(110vw); }
+            display: none;
         }
 
 
         main.container {
             background: var(--bg-card);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--border-glass);
             border-radius: 20px;
             padding: 40px;
             max-width: 550px;
             width: 100%;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
             animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
             z-index: 10;
