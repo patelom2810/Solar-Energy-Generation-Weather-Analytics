@@ -62,7 +62,7 @@
 
 ```
 solar_analytics/
-├── src/                          # All Python modules
+├── 📁 src/                       # <i class="fas fa-code"></i> All Python modules
 │   ├── __init__.py              # Package initialization
 │   ├── app_main.py              # Main Flask application
 │   ├── appsql.py                # Database operations
@@ -71,26 +71,26 @@ solar_analytics/
 │   ├── models.py                # ML model management
 │   ├── config.py                # Application config
 │   └── tests.py                 # Unit tests
-├── data/                         # CSV data files
+├── 📊 data/                      # <i class="fas fa-file-csv"></i> CSV data files
 │   ├── fact_solar_daily.csv
 │   ├── fact_solar_hourly.csv
 │   ├── fact_weather_daily.csv
 │   ├── fact_weather_hourly.csv
 │   ├── dim_date.csv
 │   └── dim_weather_codes.csv
-├── models/                       # Trained ML models
+├── 🧠 models/                    # <i class="fas fa-brain"></i> Trained ML models
 │   ├── solar_generation_model.pkl
 │   └── feature_names.pkl
-├── templates/                    # HTML templates
+├── 🎨 templates/                 # <i class="fas fa-palette"></i> HTML templates
 │   ├── index.html
 │   └── dashboard.html
-├── sql/                          # Database schemas
+├── 🗄️ sql/                        # <i class="fas fa-database"></i> Database schemas
 │   └── create_table.sql
-├── app.py                        # Entry point (imports from src)
-├── docker-compose.yml            # Docker Compose configuration
-├── Dockerfile                    # Docker image build
-├── requirements.txt              # Python dependencies
-└── README.md                     # This file
+├── 🐍 app.py                     # <i class="fas fa-rocket"></i> Entry point (imports from src)
+├── 🐳 docker-compose.yml         # <i class="fas fa-cube"></i> Docker Compose configuration
+├── 📦 Dockerfile                 # <i class="fas fa-box"></i> Docker image build
+├── 📋 requirements.txt           # <i class="fas fa-list"></i> Python dependencies
+└── 📖 README.md                  # <i class="fas fa-book"></i> This file
 ```
 
 ## <span style="color: #0284c7;"><i class="fas fa-rocket"></i> Recent Improvements (v1.1.0)</span>
