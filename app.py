@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 import joblib, numpy as np, pandas as pd
-from appsql import log_prediction, get_prediction_history, get_prediction_stats
+from appsql import log_prediction, get_prediction_history, get_prediction_stats, init_db, init_connection_pool
 from datetime import datetime, timedelta
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 import os
@@ -8,6 +8,41 @@ import os
 app    = Flask(__name__)
 model  = joblib.load('models/solar_generation_model.pkl')
 FEATS  = joblib.load('models/feature_names.pkl')
+
+# Input validation bounds for prediction features
+FEATURE_BOUNDS = {
+    'shortwave_radiation_sum': (0, 500),      # W/m²
+    'sunshine_duration': (0, 86400),           # seconds per day
+    'cloud_cover_mean': (0, 100),              # percentage
+    'temperature_2m_mean': (-50, 60),          # celsius
+    'wind_speed_10m_mean': (0, 50),            # m/s
+    'rain_sum': (0, 500),                      # mm
+}
+
+# Flag to track if startup was called
+_startup_done = False
+
+def _startup():
+    """Initialize database and connection pool"""
+    global _startup_done
+    if _startup_done:
+        return
+    try:
+        init_connection_pool()
+        init_db()
+        print("✓ App startup: Database and connection pool initialized")
+        _startup_done = True
+    except Exception as e:
+        print(f"⚠ Startup warning: {e}")
+        _startup_done = True
+
+# Initialize on first request
+@app.before_request
+def before_request():
+    """Execute startup on first request"""
+    global _startup_done
+    if not _startup_done:
+        _startup()
 
 # ── Cache model scores so we only compute once ──────────────────────────
 _model_score_cache = None
@@ -23,7 +58,7 @@ def _compute_model_scores():
         merged['date_dt'] = pd.to_datetime(merged['date'])
         merged['is_weekend_enc'] = merged['date_dt'].dt.dayofweek.isin([5,6]).astype(int)
         merged['season_enc']     = merged['date_dt'].dt.month.apply(lambda m: 1 if m in [6,7,8,9,10,11] else 0)
-        merged['sunshine_ratio'] = merged['sunshine_duration'] / 43200
+        merged['sunshine_ratio'] = merged['sunshine_duration'] / 86400
         merged['rad_clear']      = merged['shortwave_radiation_sum'] * (1 - merged['cloud_cover_mean'] / 100)
         X = merged[FEATS]
         y = merged['generation_kwh']
@@ -258,42 +293,68 @@ def api_dashboard_data():
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    data = request.get_json()
-    # Build DataFrame in correct feature order
-    row = {
-        'shortwave_radiation_sum': data.get('shortwave_radiation_sum', 24.0),
-        'sunshine_duration':       data.get('sunshine_duration', 38000),
-        'cloud_cover_mean':        data.get('cloud_cover_mean', 30.0),
-        'temperature_2m_mean':     data.get('temperature_2m_mean', 26.0),
-        'wind_speed_10m_mean':     data.get('wind_speed_10m_mean', 18.0),
-        'rain_sum':                data.get('rain_sum', 0.0),
-        'season_enc':              1 if data.get('season','Dry')=='Wet' else 0,
-        'is_weekend_enc':          int(data.get('is_weekend', False)),
-        'sunshine_ratio':          data.get('sunshine_duration',38000) / 43200,
-        'rad_clear':               data.get('shortwave_radiation_sum',24.0) *
-                                   (1 - data.get('cloud_cover_mean',30)/100),
-    }
-    X = pd.DataFrame([row])[FEATS]
-    pred = float(model.predict(X)[0])
+    """Predict solar generation with input validation"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid JSON payload'}), 400
+        
+        # Validate input bounds
+        errors = []
+        for feature, (min_val, max_val) in FEATURE_BOUNDS.items():
+            if feature in data:
+                val = data.get(feature)
+                try:
+                    val = float(val)
+                    if not (min_val <= val <= max_val):
+                        errors.append(f"{feature} must be between {min_val} and {max_val}, got {val}")
+                except (ValueError, TypeError):
+                    errors.append(f"{feature} must be a number, got {type(val).__name__}")
+        
+        if errors:
+            return jsonify({'error': 'Validation failed', 'details': errors}), 400
+        
+        # Build DataFrame in correct feature order
+        row = {
+            'shortwave_radiation_sum': data.get('shortwave_radiation_sum', 24.0),
+            'sunshine_duration':       data.get('sunshine_duration', 38000),
+            'cloud_cover_mean':        data.get('cloud_cover_mean', 30.0),
+            'temperature_2m_mean':     data.get('temperature_2m_mean', 26.0),
+            'wind_speed_10m_mean':     data.get('wind_speed_10m_mean', 18.0),
+            'rain_sum':                data.get('rain_sum', 0.0),
+            'season_enc':              1 if data.get('season','Dry')=='Wet' else 0,
+            'is_weekend_enc':          int(data.get('is_weekend', False)),
+            'sunshine_ratio':          data.get('sunshine_duration',38000) / 86400,
+            'rad_clear':               data.get('shortwave_radiation_sum',24.0) *
+                                       (1 - data.get('cloud_cover_mean',30)/100),
+        }
+        X = pd.DataFrame([row])[FEATS]
+        pred = float(model.predict(X)[0])
+        
+        # Prepare data for database logging
+        log_data = {
+            'shortwave_radiation_sum': row['shortwave_radiation_sum'],
+            'sunshine_duration': row['sunshine_duration'],
+            'cloud_cover_mean': row['cloud_cover_mean'],
+            'temperature_2m_mean': row['temperature_2m_mean'],
+            'wind_speed_10m_mean': row['wind_speed_10m_mean'],
+            'rain_sum': row['rain_sum'],
+            'is_weekend_enc': row['is_weekend_enc'],
+            'season': data.get('season','Dry'),
+            'predicted_kwh': pred
+        }
+        
+        # Log prediction to database
+        log_prediction(log_data)
+        
+        return jsonify({'predicted_generation_kwh': round(pred, 3),
+                        'status': 'Low' if pred < 5 else 'Normal' })
     
-    # Prepare data for database logging
-    log_data = {
-        'shortwave_radiation_sum': row['shortwave_radiation_sum'],
-        'sunshine_duration': row['sunshine_duration'],
-        'cloud_cover_mean': row['cloud_cover_mean'],
-        'temperature_2m_mean': row['temperature_2m_mean'],
-        'wind_speed_10m_mean': row['wind_speed_10m_mean'],
-        'rain_sum': row['rain_sum'],
-        'is_weekend_enc': row['is_weekend_enc'],
-        'season': data.get('season','Dry'),
-        'predicted_kwh': pred
-    }
-    
-    # Log prediction to database
-    log_prediction(log_data)
-    
-    return jsonify({'predicted_generation_kwh': round(pred, 3),
-                    'status': 'Low' if pred < 5 else 'Normal' })
+    except Exception as e:
+        print(f"Error in predict: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/history', methods=['GET'])
 def history():

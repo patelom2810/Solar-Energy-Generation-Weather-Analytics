@@ -1,5 +1,5 @@
 import mysql.connector
-from mysql.connector import Error
+from mysql.connector import Error, pooling
 import os
 
 # MySQL connection configuration
@@ -11,23 +11,41 @@ DB_CONFIG = {
     'port': int(os.getenv('DB_PORT', 3306))
 }
 
+# Connection pool configuration
+db_pool = None
+
+def init_connection_pool():
+    """Initialize MySQL connection pool for better performance"""
+    global db_pool
+    try:
+        db_pool = pooling.MySQLConnectionPool(
+            pool_name='solar_pool',
+            pool_size=5,
+            pool_reset_session=True,
+            **DB_CONFIG
+        )
+        print("✓ Connection pool initialized")
+        return True
+    except Error as e:
+        print(f"✗ Connection pool error: {e}")
+        return False
+
 def init_db():
     """Initialize MySQL database with prediction_logs table"""
+    global db_pool
+    if db_pool is None:
+        init_connection_pool()
     try:
-        conn = mysql.connector.connect(
-            host=DB_CONFIG['host'],
-            user=DB_CONFIG['user'],
-            password=DB_CONFIG['password'],
-            port=DB_CONFIG['port']
-        )
+        conn = db_pool.get_connection()
         cursor = conn.cursor()
         
         # Create database if not exists
         cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DB_CONFIG['database']}")
         cursor.close()
+        conn.close()
         
         # Connect to the database
-        conn = mysql.connector.connect(**DB_CONFIG)
+        conn = db_pool.get_connection()
         cursor = conn.cursor()
         
         # Create table if not exists
@@ -58,7 +76,7 @@ def init_db():
 
 def log_prediction(prediction_data):
     """
-    Store prediction data into MySQL database.
+    Store prediction data into MySQL database using connection pool.
     
     Args:
         prediction_data (dict): Dictionary containing prediction details
@@ -66,10 +84,12 @@ def log_prediction(prediction_data):
     Returns:
         bool: True if successful, False otherwise
     """
-    init_db()  # Ensure database and table exist
+    global db_pool
+    if db_pool is None:
+        init_connection_pool()
     
     try:
-        conn = mysql.connector.connect(**DB_CONFIG)
+        conn = db_pool.get_connection()
         cursor = conn.cursor()
         
         sql = '''INSERT INTO prediction_logs
@@ -105,7 +125,7 @@ def log_prediction(prediction_data):
 
 def get_prediction_history(limit=100):
     """
-    Retrieve recent prediction history from database.
+    Retrieve recent prediction history from database using connection pool.
     
     Args:
         limit (int): Number of records to retrieve
@@ -113,10 +133,12 @@ def get_prediction_history(limit=100):
     Returns:
         list: List of prediction records
     """
-    init_db()  # Ensure database and table exist
+    global db_pool
+    if db_pool is None:
+        init_connection_pool()
     
     try:
-        conn = mysql.connector.connect(**DB_CONFIG)
+        conn = db_pool.get_connection()
         cursor = conn.cursor(dictionary=True)
         
         sql = '''SELECT * FROM prediction_logs 
@@ -136,15 +158,17 @@ def get_prediction_history(limit=100):
 
 def get_prediction_stats():
     """
-    Get statistics about predictions.
+    Get statistics about predictions using connection pool.
     
     Returns:
         dict: Statistics including count, average, min, max, and predictions made today
     """
-    init_db()  # Ensure database and table exist
+    global db_pool
+    if db_pool is None:
+        init_connection_pool()
     
     try:
-        conn = mysql.connector.connect(**DB_CONFIG)
+        conn = db_pool.get_connection()
         cursor = conn.cursor(dictionary=True)
         
         sql = '''SELECT 
