@@ -1,6 +1,9 @@
 import mysql.connector
 from mysql.connector import Error, pooling
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # MySQL connection configuration
 DB_CONFIG = {

@@ -13,12 +13,12 @@
             --bg-card: #ffffff;
             --bg-input: #f3f4f6;
             --border-glass: rgba(0, 0, 0, 0.1);
-            --accent-cyan: #06b6d4;
+            --accent-cyan: #0284c7;
             --accent-blue: #3b82f6;
             --text-main: #1f2937;
             --text-muted: #6b7280;
-            --success: #10b981;
-            --warning: #f59e0b;
+            --success: #059669;
+            --warning: #d97706;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -84,7 +84,7 @@
             width: 100%; padding: 14px 16px; background: var(--bg-input); border: 1px solid var(--border-glass);
             border-radius: 10px; color: var(--text-main); font-family: inherit; font-size: 15px; transition: all 0.3s ease;
         }
-        input[type="number"]:focus, select:focus { outline: none; border-color: var(--accent-cyan); box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.1); background: rgba(15, 23, 42, 0.8); }
+        input[type="number"]:focus, select:focus { outline: none; border-color: var(--accent-cyan); box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.1); background: rgba(255, 255, 255, 0.8); }
 
         .checkbox-group { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding: 16px; background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 10px; cursor: pointer; transition: all 0.2s; }
         .checkbox-group:hover { background: rgba(6, 182, 212, 0.1); }
@@ -137,27 +137,27 @@
     <form id="predict-form">
         <div class="form-group">
             <label for="rad"><i class="fas fa-sun"></i> Shortwave Radiation (W/m²)</label>
-            <input type="number" id="rad" placeholder="e.g., 24" step="0.01" required>
+            <input type="number" id="rad" placeholder="e.g., 24" min="0" max="500" step="0.01" required>
         </div>
         <div class="form-group">
             <label for="sun"><i class="fas fa-sun"></i> Sunshine Duration (seconds)</label>
-            <input type="number" id="sun" placeholder="e.g., 38000" required>
+            <input type="number" id="sun" placeholder="e.g., 38000" min="0" max="86400" required>
         </div>
         <div class="form-group">
             <label for="cloud"><i class="fas fa-cloud"></i> Cloud Cover (%)</label>
-            <input type="number" id="cloud" placeholder="e.g., 30" step="0.1" required>
+            <input type="number" id="cloud" placeholder="e.g., 30" min="0" max="100" step="0.1" required>
         </div>
         <div class="form-group">
             <label for="temp"><i class="fas fa-thermometer-half"></i> Temperature 2m (°C)</label>
-            <input type="number" id="temp" placeholder="e.g., 26" step="0.1" required>
+            <input type="number" id="temp" placeholder="e.g., 26" min="-50" max="60" step="0.1" required>
         </div>
         <div class="form-group">
             <label for="wind"><i class="fas fa-wind"></i> Wind Speed 10m (m/s)</label>
-            <input type="number" id="wind" placeholder="e.g., 18" step="0.1" required>
+            <input type="number" id="wind" placeholder="e.g., 18" min="0" max="50" step="0.1" required>
         </div>
         <div class="form-group">
             <label for="rain"><i class="fas fa-droplet"></i> Rain Sum (mm)</label>
-            <input type="number" id="rain" placeholder="e.g., 0" step="0.1" required>
+            <input type="number" id="rain" placeholder="e.g., 0" min="0" max="500" step="0.1" required>
         </div>
         <div class="form-group">
             <label for="season"><i class="fas fa-leaf"></i> Season</label>
@@ -214,13 +214,20 @@ document.getElementById('predict-form')
 
         const data = await res.json();
         
+        if (data.error) {
+            let errorMsg = data.error;
+            if (data.details) errorMsg += ': ' + data.details.join(', ');
+            resultDiv.innerHTML = `<div style="color: #ef4444; background: #fee2e2; padding: 12px; border-radius: 8px;"><i class="fas fa-exclamation-triangle"></i> Error: ${errorMsg}</div>`;
+            return;
+        }
+        
         const statusClass = data.status === 'Low' ? 'status-warning' : 'status-success';
         const statusIcon = data.status === 'Low' ? 'fa-exclamation-circle' : 'fa-check-circle';
         
         resultDiv.innerHTML = `
             <div class="result-item">
                 <span><i class="fas fa-bolt"></i> Predicted Generation:</span>
-                <span class="result-value">${data.predicted_generation_kwh} kWh</span>
+                <span class="result-value" style="color: #ef4444; font-size: 20px; font-weight: 800;">${data.predicted_generation_kwh} kWh</span>
             </div>
             <div class="result-item">
                 <span><i class="fas fa-info-circle"></i> Status:</span>

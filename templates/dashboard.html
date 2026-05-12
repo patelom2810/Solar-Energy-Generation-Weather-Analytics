@@ -13,12 +13,12 @@
             --bg-dark: #ffffff;
             --bg-card: #ffffff;
             --border-glass: rgba(0, 0, 0, 0.1);
-            --accent-cyan: #06b6d4;
+            --accent-cyan: #0284c7;
             --accent-blue: #3b82f6;
             --text-main: #1f2937;
             --text-muted: #6b7280;
-            --success: #10b981;
-            --warning: #f59e0b;
+            --success: #059669;
+            --warning: #d97706;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -149,14 +149,20 @@
         .kpi-value { font-size: 28px; font-weight: 700; margin-bottom: 8px; color: var(--text-main); }
         .kpi-change { font-size: 13px; color: var(--success); display: flex; align-items: center; gap: 6px; font-weight: 500; }
 
+        /* Toaster */
+        .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: var(--bg-card); border: 1px solid var(--border-glass); border-left: 4px solid var(--success); padding: 14px 20px; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 12px; transform: translateX(120%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); color: var(--text-main); font-weight: 500; font-size: 14px; }
+        .toast.show { transform: translateX(0); }
+        .toast i { color: var(--success); font-size: 16px; }
+
         /* Charts */
-        section.charts-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 20px; margin-bottom: 40px; }
-        .chart-container { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 16px; padding: 24px; transition: all 0.3s ease; }
-        .chart-container:hover { border-color: rgba(6, 182, 212, 0.3); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); }
+        section.charts-section { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 30px; }
+        .chart-container { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 12px; padding: 16px; transition: all 0.3s ease; }
+        .chart-container:hover { border-color: rgba(2, 132, 199, 0.3); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1); }
         .chart-container.full-width { grid-column: 1 / -1; }
-        .chart-title { font-size: 16px; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; color: var(--text-main); }
+        .chart-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: var(--text-main); }
         .chart-title i { color: var(--accent-cyan); }
-        .chart-wrapper { position: relative; height: 300px; }
+        .chart-wrapper { position: relative; height: 200px; }
 
         /* Sections common */
         .section-card { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 16px; padding: 24px; margin-bottom: 40px; }
@@ -164,17 +170,17 @@
         .section-title i { color: var(--accent-cyan); }
 
         /* Predictions */
-        .predictions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 30px; }
-        .prediction-stat { background: #f9fafb; border: 1px solid var(--border-glass); border-radius: 12px; padding: 16px; text-align: center; transition: all 0.3s ease; }
+        .predictions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 24px; margin-bottom: 30px; }
+        .prediction-stat { background: #f9fafb; border: 1px solid var(--border-glass); border-radius: 12px; padding: 24px; text-align: center; transition: all 0.3s ease; }
         .prediction-stat:hover { border-color: rgba(6, 182, 212, 0.3); transform: translateY(-3px); }
-        .prediction-stat-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; font-weight: 600; }
-        .prediction-stat-value { font-size: 24px; font-weight: 700; color: var(--text-main); }
+        .prediction-stat-label { font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; font-weight: 600; }
+        .prediction-stat-value { font-size: 28px; font-weight: 700; color: var(--text-main); }
 
         .predictions-table { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border-glass); background: #f9fafb; }
-        table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        thead { background: rgba(255, 255, 255, 0.03); border-bottom: 1px solid var(--border-glass); }
-        th { padding: 16px; text-align: left; color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
-        td { padding: 16px; border-bottom: 1px solid var(--border-glass); color: var(--text-main); }
+        table { width: 100%; border-collapse: collapse; font-size: 15px; }
+        thead { background: rgba(255, 255, 255, 0.6); border-bottom: 1px solid var(--border-glass); }
+        th { padding: 20px 24px; text-align: left; color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px; }
+        td { padding: 20px 24px; border-bottom: 1px solid var(--border-glass); color: var(--text-main); }
         tbody tr:hover { background: rgba(6, 182, 212, 0.05); }
 
         /* Model Score */
@@ -197,7 +203,8 @@
         .fi-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan)); border-radius: 4px; transition: width 1s ease; }
         .fi-pct { width: 45px; text-align: right; color: var(--text-main); font-weight: 600; font-size: 12px; }
 
-        @media (max-width: 1024px) { .charts-section { grid-template-columns: 1fr; } }
+        @media (max-width: 1024px) { section.charts-section { grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); } }
+        @media (max-width: 768px) { nav.top-nav { flex-direction: column; gap: 15px; padding: 15px; } section.charts-section { grid-template-columns: 1fr; } }
         @media (max-width: 768px) { nav.top-nav { flex-direction: column; gap: 15px; padding: 15px; } }
     </style>
 </head>
@@ -216,42 +223,42 @@
         </div>
         <div class="nav-controls">
             <a href="/" class="btn btn-outline"><i class="fas fa-magic"></i> Predictor</a>
-            <button class="btn btn-primary" id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
-            <div class="status-badge" id="statusBadge"><div class="status-dot"></div> Live</div>
         </div>
     </nav>
+
+    <div id="toast-container" class="toast-container"></div>
 
     <main class="main-content">
         <section class="kpi-section">
             <div class="kpi-card">
-                <div class="kpi-header"><div class="kpi-title">⚡ Total Generation</div><div class="kpi-icon"><i class="fas fa-bolt"></i></div></div>
+                <div class="kpi-header"><div class="kpi-title">Total Generation</div><div class="kpi-icon"><i class="fas fa-bolt"></i></div></div>
                 <div class="kpi-value" id="kpiGeneration">-</div>
                 <div class="kpi-change"><i class="fas fa-arrow-up"></i> <span id="kpiGenerationChange">-</span></div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-header"><div class="kpi-title">🔌 Total Consumption</div><div class="kpi-icon"><i class="fas fa-plug"></i></div></div>
+                <div class="kpi-header"><div class="kpi-title">Total Consumption</div><div class="kpi-icon"><i class="fas fa-plug"></i></div></div>
                 <div class="kpi-value" id="kpiConsumption">-</div>
                 <div class="kpi-change"><i class="fas fa-arrow-up"></i> <span id="kpiConsumptionChange">-</span></div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-header"><div class="kpi-title">🌱 Self Sufficiency</div><div class="kpi-icon"><i class="fas fa-leaf"></i></div></div>
+                <div class="kpi-header"><div class="kpi-title">Self Sufficiency</div><div class="kpi-icon"><i class="fas fa-leaf"></i></div></div>
                 <div class="kpi-value" id="kpiSelfSufficiency">-</div>
                 <div class="kpi-change" id="kpiSelfSufficiencyChange">-</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-header"><div class="kpi-title">🌡️ Avg Temperature</div><div class="kpi-icon"><i class="fas fa-thermometer-half"></i></div></div>
+                <div class="kpi-header"><div class="kpi-title">Avg Temperature</div><div class="kpi-icon"><i class="fas fa-thermometer-half"></i></div></div>
                 <div class="kpi-value" id="kpiTemperature">-</div>
                 <div class="kpi-change"><i class="fas fa-arrow-up"></i> <span id="kpiTemperatureChange">-</span></div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-header"><div class="kpi-title">✨ Predictions</div><div class="kpi-icon"><i class="fas fa-star"></i></div></div>
+                <div class="kpi-header"><div class="kpi-title">Predictions</div><div class="kpi-icon"><i class="fas fa-star"></i></div></div>
                 <div class="kpi-value" id="kpiPredictions">-</div>
                 <div class="kpi-change"><i class="fas fa-arrow-up"></i> <span id="kpiPredictionsChange">-</span></div>
             </div>
         </section>
 
         <section class="charts-section">
-            <div class="chart-container full-width">
+            <div class="chart-container">
                 <div class="chart-title"><i class="fas fa-chart-line"></i> Daily Generation vs Consumption</div>
                 <div class="chart-wrapper"><canvas id="dailyChart"></canvas></div>
             </div>
@@ -314,10 +321,13 @@
                     <div class="score-card-label">RMSE</div><div class="score-card-value" id="msRMSE">–</div><div class="score-card-unit">kWh root mean sq error</div>
                 </div>
                 <div class="score-card">
-                    <div class="score-card-label">Training Samples</div><div class="score-card-value" id="msN">–</div><div class="score-card-unit">data points used</div>
+                    <div class="score-card-label">MSE</div><div class="score-card-value" id="msMSE">–</div><div class="score-card-unit">kWh sq error</div>
                 </div>
-                <div class="score-card model">
-                    <div class="score-card-label">Algorithm</div><div class="score-card-value" id="msAlgo" style="font-size:22px;">–</div><div class="score-card-unit">sklearn ensemble</div>
+                <div class="score-card">
+                    <div class="score-card-label">MAPE</div><div class="score-card-value" id="msMAPE">–</div><div class="score-card-unit">% error rate</div>
+                </div>
+                <div class="score-card">
+                    <div class="score-card-label">Training Samples</div><div class="score-card-value" id="msN">–</div><div class="score-card-unit">data points used</div>
                 </div>
             </div>
             <div class="model-charts-row">
@@ -534,14 +544,29 @@
             });
         }
 
-        document.getElementById('refreshBtn').addEventListener('click', () => {
-            document.getElementById('refreshBtn').classList.add('loading');
-            fetchDashboardData();
-            setTimeout(() => document.getElementById('refreshBtn').classList.remove('loading'), 1000);
-        });
+        // Toaster Logic
+        function showToast(message, icon = 'fa-check-circle') {
+            const container = document.getElementById('toast-container');
+            if(!container) return;
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<i class="fas ${icon}"></i> <span>${message}</span>`;
+            container.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 10);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }, 3000);
+        }
 
         fetchDashboardData();
-        setInterval(fetchDashboardData, 5000);
+        setInterval(() => {
+            fetchDashboardData();
+            showToast('Dashboard live updated', 'fa-sync-alt');
+        }, 15000);
+
 
         // ═══ MODEL SCORE ════════════════════════════════════════════
         async function fetchModelScore() {
@@ -555,9 +580,10 @@
                 document.getElementById('msR2').textContent   = r2.toFixed(4);
                 document.getElementById('msMAE').textContent  = data.mae.toFixed(4);
                 document.getElementById('msRMSE').textContent = data.rmse.toFixed(4);
+                document.getElementById('msMSE').textContent  = data.mse ? data.mse.toFixed(4) : '–';
+                document.getElementById('msMAPE').textContent = data.mape ? data.mape.toFixed(2) + '%' : '–';
                 document.getElementById('msN').textContent    = data.n_samples;
-                document.getElementById('msAlgo').textContent = (data.model_type || '').replace(/([A-Z])/g, ' $1').trim();
-                document.getElementById('msModelType').textContent = data.model_type || '';
+                document.getElementById('msModelType').textContent = (data.model_type || '').replace(/([A-Z])/g, ' $1').trim();
 
                 // Colour the R2 card
                 const r2card = document.getElementById('ms_r2_card');

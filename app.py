@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, render_template
 import joblib, numpy as np, pandas as pd
 from appsql import log_prediction, get_prediction_history, get_prediction_stats, init_db, init_connection_pool
 from datetime import datetime, timedelta
-from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error, mean_absolute_percentage_error
 import os
 
 app    = Flask(__name__)
@@ -69,6 +69,8 @@ def _compute_model_scores():
             'r2_score':   round(float(r2_score(y, preds)), 4),
             'mae':        round(float(mean_absolute_error(y, preds)), 4),
             'rmse':       round(float(np.sqrt(mean_squared_error(y, preds))), 4),
+            'mse':        round(float(mean_squared_error(y, preds)), 4),
+            'mape':       round(float(mean_absolute_percentage_error(y, preds)) * 100, 2),
             'n_samples':  int(len(y)),
             'feature_importances': dict(sorted(fi.items(), key=lambda x: -x[1])),
             'predictions_vs_actual': [
