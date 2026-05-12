@@ -2,6 +2,11 @@
 
 > **A modern, responsive solar energy analytics platform combining historical CSV data visualization with real-time ML prediction storage and real-time database retrieval.**
 
+![Python](https://img.shields.io/badge/Python-3.12-blue)
+![Flask](https://img.shields.io/badge/Flask-3.0-black)
+![Machine Learning](https://img.shields.io/badge/ML-ScikitLearn-orange)
+![Status](https://img.shields.io/badge/Status-Active-success)
+
 ## <i class="fas fa-star"></i> Features
 
 ### <i class="fas fa-chart-line"></i> Real-Time Dashboard

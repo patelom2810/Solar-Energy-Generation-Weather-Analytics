@@ -4,10 +4,29 @@ from appsql import log_prediction, get_prediction_history, get_prediction_stats,
 from datetime import datetime, timedelta
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error, mean_absolute_percentage_error
 import os
+import logging
+import threading
+from api_docs import API_DOCS
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 app    = Flask(__name__)
-model  = joblib.load('models/solar_generation_model.pkl')
-FEATS  = joblib.load('models/feature_names.pkl')
+
+# Load model with validation
+try:
+    model  = joblib.load('models/solar_generation_model.pkl')
+    FEATS  = joblib.load('models/feature_names.pkl')
+    logger.info("✓ Model and features loaded successfully")
+except FileNotFoundError as e:
+    logger.error(f"✗ Model file not found: {e}", exc_info=True)
+    model = None
+    FEATS = None
+except Exception as e:
+    logger.error(f"✗ Error loading model: {e}", exc_info=True)
+    model = None
+    FEATS = None
 
 # Input validation bounds for prediction features
 FEATURE_BOUNDS = {
@@ -82,26 +101,37 @@ def _compute_model_scores():
         _model_score_cache = {'error': str(e)}
     return _model_score_cache
 
-# Data cache for CSV files
+# Data cache for CSV files with thread safety
 csv_cache = {}
 csv_cache_time = {}
+csv_cache_lock = threading.Lock()  # Thread-safe lock for cache operations
 CACHE_DURATION = 300  # 5 minutes
 
 def load_csv_data(filename):
-    """Load CSV with caching to reduce I/O"""
+    """Load CSV with caching to reduce I/O - thread-safe"""
     filepath = f'data/{filename}'
     now = datetime.now()
     
-    # Check if cached data is still valid
-    if filename in csv_cache and filename in csv_cache_time:
-        if (now - csv_cache_time[filename]).total_seconds() < CACHE_DURATION:
-            return csv_cache[filename]
-    
-    # Load fresh data
-    df = pd.read_csv(filepath)
-    csv_cache[filename] = df
-    csv_cache_time[filename] = now
-    return df
+    with csv_cache_lock:
+        # Check if cached data is still valid
+        if filename in csv_cache and filename in csv_cache_time:
+            if (now - csv_cache_time[filename]).total_seconds() < CACHE_DURATION:
+                logger.debug(f"Cache hit for {filename}")
+                return csv_cache[filename]
+        
+        # Load fresh data
+        try:
+            df = pd.read_csv(filepath)
+            csv_cache[filename] = df
+            csv_cache_time[filename] = now
+            logger.info(f"Loaded CSV: {filename} ({len(df)} rows)")
+            return df
+        except FileNotFoundError:
+            logger.error(f"CSV file not found: {filepath}")
+            raise
+        except Exception as e:
+            logger.error(f"Error loading CSV {filename}: {e}", exc_info=True)
+            raise
 
 @app.route('/')
 def home():
@@ -284,20 +314,25 @@ def api_dashboard_data():
         })
     
     except Exception as e:
-        print(f"Error in api_dashboard_data: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Error in api_dashboard_data: {str(e)}", exc_info=True)
         return jsonify({'error': str(e), 'type': type(e).__name__}), 500
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    """Predict solar generation with input validation"""
+    """Predict solar generation with comprehensive input validation"""
+    
+    # Check if model is loaded
+    if model is None or FEATS is None:
+        logger.error("Model not available for prediction")
+        return jsonify({'error': 'Model not loaded or initialization failed'}), 503
+    
     try:
         data = request.get_json()
         if not data:
+            logger.warning("Empty JSON payload received in /predict")
             return jsonify({'error': 'Invalid JSON payload'}), 400
         
-        # Validate input bounds
+        # Validate input bounds for numeric features
         errors = []
         for feature, (min_val, max_val) in FEATURE_BOUNDS.items():
             if feature in data:
@@ -309,7 +344,18 @@ def predict():
                 except (ValueError, TypeError):
                     errors.append(f"{feature} must be a number, got {type(val).__name__}")
         
+        # Validate season parameter
+        season = data.get('season', 'Dry')
+        if season not in ['Dry', 'Wet']:
+            errors.append(f"season must be 'Dry' or 'Wet', got '{season}'")
+        
+        # Validate is_weekend parameter
+        is_weekend = data.get('is_weekend', False)
+        if not isinstance(is_weekend, (bool, int)) or (isinstance(is_weekend, int) and is_weekend not in [0, 1]):
+            errors.append(f"is_weekend must be boolean or 0/1, got {type(is_weekend).__name__}")
+        
         if errors:
+            logger.warning(f"Validation failed for predict: {errors}")
             return jsonify({'error': 'Validation failed', 'details': errors}), 400
         
         # Build DataFrame in correct feature order
@@ -320,11 +366,11 @@ def predict():
             'temperature_2m_mean':     data.get('temperature_2m_mean', 26.0),
             'wind_speed_10m_mean':     data.get('wind_speed_10m_mean', 18.0),
             'rain_sum':                data.get('rain_sum', 0.0),
-            'season_enc':              1 if data.get('season','Dry')=='Wet' else 0,
-            'is_weekend_enc':          int(data.get('is_weekend', False)),
-            'sunshine_ratio':          data.get('sunshine_duration',38000) / 86400,
-            'rad_clear':               data.get('shortwave_radiation_sum',24.0) *
-                                       (1 - data.get('cloud_cover_mean',30)/100),
+            'season_enc':              1 if season == 'Wet' else 0,
+            'is_weekend_enc':          int(is_weekend),
+            'sunshine_ratio':          data.get('sunshine_duration', 38000) / 86400,
+            'rad_clear':               data.get('shortwave_radiation_sum', 24.0) *
+                                       (1 - data.get('cloud_cover_mean', 30) / 100),
         }
         X = pd.DataFrame([row])[FEATS]
         pred = float(model.predict(X)[0])
@@ -338,38 +384,86 @@ def predict():
             'wind_speed_10m_mean': row['wind_speed_10m_mean'],
             'rain_sum': row['rain_sum'],
             'is_weekend_enc': row['is_weekend_enc'],
-            'season': data.get('season','Dry'),
+            'season': season,
             'predicted_kwh': pred
         }
         
         # Log prediction to database
-        log_prediction(log_data)
+        success = log_prediction(log_data)
+        if not success:
+            logger.warning(f"Failed to log prediction to database, but prediction was generated: {pred:.3f} kWh")
         
-        return jsonify({'predicted_generation_kwh': round(pred, 3),
-                        'status': 'Low' if pred < 5 else 'Normal' })
+        logger.info(f"Prediction generated: {pred:.3f} kWh for season={season}, is_weekend={is_weekend}")
+        return jsonify({
+            'predicted_generation_kwh': round(pred, 3),
+            'status': 'Low' if pred < 5 else 'Normal'
+        })
     
     except Exception as e:
-        print(f"Error in predict: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error in predict endpoint: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e), 'type': type(e).__name__}), 500
 
 @app.route('/history', methods=['GET'])
 def history():
-    """Get prediction history - skip if database unavailable"""
+    """Get prediction history - gracefully handles database unavailability"""
     try:
         limit = request.args.get('limit', 100, type=int)
+        if limit < 1 or limit > 1000:
+            limit = 100  # Default if out of range
+        
         records = get_prediction_history(limit)
+        logger.info(f"Retrieved {len(records)} prediction history records (limit={limit})")
         return jsonify({'predictions': records, 'count': len(records)})
     except Exception as e:
-        print(f"Database error in history: {str(e)}")
-        return jsonify({'predictions': [], 'count': 0})
+        logger.error(f"Error in history endpoint: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e), 'predictions': [], 'count': 0}), 500
 
 @app.route('/stats', methods=['GET'])
 def stats():
     """Get prediction statistics"""
-    statistics = get_prediction_stats()
-    return jsonify(statistics)
+    try:
+        statistics = get_prediction_stats()
+        logger.info("Retrieved prediction statistics")
+        return jsonify(statistics if statistics else {'error': 'No statistics available'})
+    except Exception as e:
+        logger.error(f"Error in stats endpoint: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/health', methods=['GET'])
+def health():
+    """Health check endpoint"""
+    try:
+        # Check model
+        if model is None:
+            return jsonify({'status': 'unhealthy', 'reason': 'Model not loaded'}), 500
+        
+        # Check database connection
+        try:
+            stats = get_prediction_stats()
+            db_status = 'connected'
+        except:
+            db_status = 'disconnected'
+        
+        logger.info(f"Health check: model=loaded, database={db_status}")
+        return jsonify({
+            'status': 'healthy',
+            'model': 'loaded',
+            'database': db_status,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error in health check: {str(e)}", exc_info=True)
+        return jsonify({'status': 'unhealthy', 'error': str(e)}), 500
+
+@app.route('/api/docs', methods=['GET'])
+def api_docs():
+    """Return API documentation in OpenAPI format"""
+    try:
+        logger.info("API documentation requested")
+        return jsonify(API_DOCS)
+    except Exception as e:
+        logger.error(f"Error returning API docs: {str(e)}")
+        return jsonify({'error': 'Failed to load API documentation'}), 500
 
 @app.route('/api/model-score')
 def api_model_score():

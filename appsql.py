@@ -1,9 +1,13 @@
 import mysql.connector
 from mysql.connector import Error, pooling
 import os
+import logging
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # MySQL connection configuration
 DB_CONFIG = {
@@ -27,10 +31,10 @@ def init_connection_pool():
             pool_reset_session=True,
             **DB_CONFIG
         )
-        print("✓ Connection pool initialized")
+        logger.info("✓ Connection pool initialized")
         return True
     except Error as e:
-        print(f"✗ Connection pool error: {e}")
+        logger.error(f"✗ Connection pool error: {e}", exc_info=True)
         return False
 
 def init_db():
@@ -51,7 +55,7 @@ def init_db():
         conn = db_pool.get_connection()
         cursor = conn.cursor()
         
-        # Create table if not exists
+        # Create table if not exists with indexes
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS prediction_logs (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -64,17 +68,20 @@ def init_db():
                 is_weekend INT,
                 season VARCHAR(50),
                 predicted_kwh FLOAT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_timestamp (timestamp),
+                INDEX idx_season (season),
+                INDEX idx_predictions_today (timestamp, is_weekend)
             )
         ''')
         
         conn.commit()
         cursor.close()
         conn.close()
-        print("✓ MySQL Database initialized")
+        logger.info("✓ MySQL Database initialized")
         return True
     except Error as e:
-        print(f"✗ Database init error: {e}")
+        logger.error(f"✗ Database init error: {e}", exc_info=True)
         return False
 
 def log_prediction(prediction_data):
@@ -89,8 +96,12 @@ def log_prediction(prediction_data):
     """
     global db_pool
     if db_pool is None:
-        init_connection_pool()
+        if not init_connection_pool():
+            logger.error("Connection pool not available for log_prediction")
+            return False
     
+    conn = None
+    cursor = None
     try:
         conn = db_pool.get_connection()
         cursor = conn.cursor()
@@ -108,22 +119,33 @@ def log_prediction(prediction_data):
             prediction_data.get('temperature_2m_mean', 0),
             prediction_data.get('wind_speed_10m_mean', 0),
             prediction_data.get('rain_sum', 0),
-            int(prediction_data.get('is_weekend', False)),
+            int(prediction_data.get('is_weekend_enc', 0)),
             prediction_data.get('season', 'Unknown'),
             prediction_data.get('predicted_kwh', 0)
         )
         
         cursor.execute(sql, values)
         conn.commit()
-        cursor.close()
-        conn.close()
         
-        print(f"✓ Prediction logged: {prediction_data.get('predicted_kwh', 0):.2f} kWh")
+        logger.info(f"✓ Prediction logged: {prediction_data.get('predicted_kwh', 0):.2f} kWh")
         return True
         
     except Error as e:
-        print(f"✗ Database error: {e}")
+        logger.error(f"✗ Database error in log_prediction: {e}", exc_info=True)
+        if conn:
+            conn.rollback()
         return False
+    finally:
+        if cursor:
+            try:
+                cursor.close()
+            except:
+                pass
+        if conn:
+            try:
+                conn.close()
+            except:
+                pass
 
 
 def get_prediction_history(limit=100):
@@ -138,8 +160,12 @@ def get_prediction_history(limit=100):
     """
     global db_pool
     if db_pool is None:
-        init_connection_pool()
+        if not init_connection_pool():
+            logger.error("Connection pool not available for get_prediction_history")
+            return []
     
+    conn = None
+    cursor = None
     try:
         conn = db_pool.get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -149,14 +175,23 @@ def get_prediction_history(limit=100):
         
         cursor.execute(sql, (limit,))
         records = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        
+        logger.info(f"✓ Retrieved {len(records)} prediction records")
         return records
         
     except Error as e:
-        print(f"✗ Database error: {e}")
+        logger.error(f"✗ Database error in get_prediction_history: {e}", exc_info=True)
         return []
+    finally:
+        if cursor:
+            try:
+                cursor.close()
+            except:
+                pass
+        if conn:
+            try:
+                conn.close()
+            except:
+                pass
 
 
 def get_prediction_stats():
@@ -168,8 +203,12 @@ def get_prediction_stats():
     """
     global db_pool
     if db_pool is None:
-        init_connection_pool()
+        if not init_connection_pool():
+            logger.error("Connection pool not available for get_prediction_stats")
+            return {}
     
+    conn = None
+    cursor = None
     try:
         conn = db_pool.get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -180,28 +219,34 @@ def get_prediction_stats():
                     MIN(predicted_kwh) as min_generation,
                     MAX(predicted_kwh) as max_generation,
                     MAX(timestamp) as last_prediction,
-                    SUM(CASE WHEN DATE(timestamp) = CURDATE() THEN 1 ELSE 0 END) as predictions_made_today
+                    COALESCE(SUM(CASE WHEN DATE(timestamp) = CURDATE() THEN 1 ELSE 0 END), 0) as predictions_made_today
                  FROM prediction_logs'''
         
         cursor.execute(sql)
         stats = cursor.fetchone()
-        cursor.close()
-        conn.close()
         
-        # Ensure predictions_made_today is 0 if NULL
-        if stats and stats.get('predictions_made_today') is None:
-            stats['predictions_made_today'] = 0
-        
+        logger.info("✓ Retrieved prediction statistics")
         return stats if stats else {}
         
     except Error as e:
-        print(f"✗ Database error: {e}")
+        logger.error(f"✗ Database error in get_prediction_stats: {e}", exc_info=True)
         return {}
+    finally:
+        if cursor:
+            try:
+                cursor.close()
+            except:
+                pass
+        if conn:
+            try:
+                conn.close()
+            except:
+                pass
 
 
 def delete_old_predictions(days=30):
     """
-    Delete predictions older than specified days.
+    Delete predictions older than specified days using connection pool.
     
     Args:
         days (int): Delete records older than this many days
@@ -209,10 +254,14 @@ def delete_old_predictions(days=30):
     Returns:
         int: Number of records deleted
     """
-    init_db()  # Ensure database and table exist
+    global db_pool
+    if db_pool is None:
+        init_db()  # Ensure database and connection pool exist
     
+    conn = None
+    cursor = None
     try:
-        conn = mysql.connector.connect(**DB_CONFIG)
+        conn = db_pool.get_connection()
         cursor = conn.cursor()
         
         sql = '''DELETE FROM prediction_logs 
@@ -221,12 +270,23 @@ def delete_old_predictions(days=30):
         cursor.execute(sql, (days,))
         conn.commit()
         deleted_count = cursor.rowcount
-        cursor.close()
-        conn.close()
         
-        print(f"✓ Deleted {deleted_count} old predictions")
+        logger.info(f"✓ Deleted {deleted_count} old predictions (>{days} days)")
         return deleted_count
         
     except Error as e:
-        print(f"✗ Database error: {e}")
+        logger.error(f"✗ Database error in delete_old_predictions: {e}", exc_info=True)
+        if conn:
+            conn.rollback()
         return 0
+    finally:
+        if cursor:
+            try:
+                cursor.close()
+            except:
+                pass
+        if conn:
+            try:
+                conn.close()
+            except:
+                pass
