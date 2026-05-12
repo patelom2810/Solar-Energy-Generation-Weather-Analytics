@@ -3,10 +3,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DB_CONFIG = {
-    'host':     os.getenv('DB_HOST', 'localhost'),
-    'user':     os.getenv('DB_USER', 'root'),
-    'password': os.getenv('DB_PASSWORD', 'password'),
-    'database': os.getenv('DB_NAME', 'solar_analytics'),
-    'port':     int(os.getenv('DB_PORT', 3306)),
+# Database configuration is defined in appsql.py
+# This file can be used for other application config if needed
+
+FLASK_CONFIG = {
+    'debug': os.getenv('FLASK_ENV', 'development') == 'development',
+    'port': int(os.getenv('FLASK_PORT', 8000)),
+    'host': os.getenv('FLASK_HOST', '0.0.0.0'),
 }

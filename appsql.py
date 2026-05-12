@@ -140,7 +140,7 @@ def get_prediction_stats():
     Get statistics about predictions.
     
     Returns:
-        dict: Statistics including count, average, min, max
+        dict: Statistics including count, average, min, max, and predictions made today
     """
     init_db()  # Ensure database and table exist
     
@@ -153,13 +153,18 @@ def get_prediction_stats():
                     AVG(predicted_kwh) as avg_generation,
                     MIN(predicted_kwh) as min_generation,
                     MAX(predicted_kwh) as max_generation,
-                    MAX(timestamp) as last_prediction
+                    MAX(timestamp) as last_prediction,
+                    SUM(CASE WHEN DATE(timestamp) = CURDATE() THEN 1 ELSE 0 END) as predictions_made_today
                  FROM prediction_logs'''
         
         cursor.execute(sql)
         stats = cursor.fetchone()
         cursor.close()
         conn.close()
+        
+        # Ensure predictions_made_today is 0 if NULL
+        if stats and stats.get('predictions_made_today') is None:
+            stats['predictions_made_today'] = 0
         
         return stats if stats else {}
         

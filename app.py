@@ -251,7 +251,7 @@ def predict():
     log_prediction(log_data)
     
     return jsonify({'predicted_generation_kwh': round(pred, 3),
-                    'status': 'Fraud' if pred < 5 else 'Normal' })
+                    'status': 'Low' if pred < 5 else 'Normal' })
 
 @app.route('/history', methods=['GET'])
 def history():
