@@ -2,11 +2,48 @@ from flask import Flask, request, jsonify, render_template
 import joblib, numpy as np, pandas as pd
 from appsql import log_prediction, get_prediction_history, get_prediction_stats
 from datetime import datetime, timedelta
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 import os
 
 app    = Flask(__name__)
 model  = joblib.load('models/solar_generation_model.pkl')
 FEATS  = joblib.load('models/feature_names.pkl')
+
+# ── Cache model scores so we only compute once ──────────────────────────
+_model_score_cache = None
+
+def _compute_model_scores():
+    global _model_score_cache
+    if _model_score_cache is not None:
+        return _model_score_cache
+    try:
+        solar   = pd.read_csv('data/fact_solar_daily.csv')
+        weather = pd.read_csv('data/fact_weather_daily.csv')
+        merged  = solar.merge(weather, on='date', how='inner')
+        merged['date_dt'] = pd.to_datetime(merged['date'])
+        merged['is_weekend_enc'] = merged['date_dt'].dt.dayofweek.isin([5,6]).astype(int)
+        merged['season_enc']     = merged['date_dt'].dt.month.apply(lambda m: 1 if m in [6,7,8,9,10,11] else 0)
+        merged['sunshine_ratio'] = merged['sunshine_duration'] / 43200
+        merged['rad_clear']      = merged['shortwave_radiation_sum'] * (1 - merged['cloud_cover_mean'] / 100)
+        X = merged[FEATS]
+        y = merged['generation_kwh']
+        preds = model.predict(X)
+        fi = dict(zip(FEATS, [float(x) for x in model.feature_importances_]))
+        _model_score_cache = {
+            'model_type': type(model).__name__,
+            'r2_score':   round(float(r2_score(y, preds)), 4),
+            'mae':        round(float(mean_absolute_error(y, preds)), 4),
+            'rmse':       round(float(np.sqrt(mean_squared_error(y, preds))), 4),
+            'n_samples':  int(len(y)),
+            'feature_importances': dict(sorted(fi.items(), key=lambda x: -x[1])),
+            'predictions_vs_actual': [
+                {'actual': round(float(a), 3), 'predicted': round(float(p), 3)}
+                for a, p in zip(y.tail(30).values, preds[-30:])
+            ]
+        }
+    except Exception as e:
+        _model_score_cache = {'error': str(e)}
+    return _model_score_cache
 
 # Data cache for CSV files
 csv_cache = {}
@@ -37,6 +74,11 @@ def home():
 def dashboard():
     """Render the modern analytics dashboard"""
     return render_template('dashboard.html')
+
+@app.route('/model-score')
+def model_score_page():
+    """Render the model performance page"""
+    return render_template('model_score.html')
 
 @app.route('/api/dashboard-data')
 def api_dashboard_data():
@@ -269,6 +311,14 @@ def stats():
     """Get prediction statistics"""
     statistics = get_prediction_stats()
     return jsonify(statistics)
+
+@app.route('/api/model-score')
+def api_model_score():
+    """Return model performance metrics and feature importances"""
+    try:
+        return jsonify(_compute_model_scores())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=False, port=8000, host='0.0.0.0', threaded=True)

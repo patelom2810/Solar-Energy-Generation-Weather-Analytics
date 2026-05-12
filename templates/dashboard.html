@@ -336,6 +336,87 @@
             font-size: 20px;
         }
 
+        /* ── Model Score Section ───────────────────────────── */
+        .model-score-section {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            margin-bottom: 32px;
+        }
+
+        .model-score-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .score-card {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 1px solid #bae6fd;
+            border-radius: 10px;
+            padding: 18px 16px;
+            text-align: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .score-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(14,165,233,.15); }
+        .score-card-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        .score-card-value {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--accent-blue);
+            line-height: 1;
+        }
+        .score-card-unit {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+        .score-card.good .score-card-value  { color: #10b981; }
+        .score-card.warn .score-card-value  { color: #f59e0b; }
+        .score-card.model .score-card-value { font-size: 16px; font-weight: 700; }
+
+        .model-charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        @media (max-width: 900px) { .model-charts-row { grid-template-columns: 1fr; } }
+
+        .model-chart-box {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 18px;
+            border: 1px solid var(--border-color);
+        }
+        .model-chart-box h4 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .model-chart-box canvas { max-height: 220px; }
+
+        /* Feature importance bars */
+        .fi-bar-wrap { display: flex; flex-direction: column; gap: 8px; }
+        .fi-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+        .fi-label { flex: 0 0 160px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .fi-bar-bg { flex: 1; height: 10px; background: #e2e8f0; border-radius: 99px; overflow: hidden; }
+        .fi-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #0ea5e9, #06b6d4); transition: width .6s ease; }
+        .fi-pct { flex: 0 0 36px; text-align: right; font-weight: 600; color: var(--text-primary); }
+
         .predictions-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -731,6 +812,58 @@
                 </div>
             </div>
         </div>
+
+            <!-- ═══════════════ MODEL SCORE SECTION ═══════════════ -->
+            <div class="model-score-section" id="modelScoreSection">
+                <div class="section-title">
+                    <i class="fas fa-robot"></i>
+                    Model Performance — Gradient Boosting Regressor
+                    <span id="msModelType" style="margin-left:auto;font-size:12px;font-weight:500;color:var(--text-secondary);background:#e0f2fe;padding:3px 10px;border-radius:99px;"></span>
+                </div>
+
+                <div class="model-score-grid">
+                    <div class="score-card" id="ms_r2_card">
+                        <div class="score-card-label">R² Score</div>
+                        <div class="score-card-value" id="msR2">–</div>
+                        <div class="score-card-unit">higher = better (max 1.0)</div>
+                    </div>
+                    <div class="score-card">
+                        <div class="score-card-label">MAE</div>
+                        <div class="score-card-value" id="msMAE">–</div>
+                        <div class="score-card-unit">kWh mean abs error</div>
+                    </div>
+                    <div class="score-card">
+                        <div class="score-card-label">RMSE</div>
+                        <div class="score-card-value" id="msRMSE">–</div>
+                        <div class="score-card-unit">kWh root mean sq error</div>
+                    </div>
+                    <div class="score-card">
+                        <div class="score-card-label">Training Samples</div>
+                        <div class="score-card-value" id="msN">–</div>
+                        <div class="score-card-unit">data points used</div>
+                    </div>
+                    <div class="score-card model">
+                        <div class="score-card-label">Algorithm</div>
+                        <div class="score-card-value" id="msAlgo">–</div>
+                        <div class="score-card-unit">sklearn ensemble</div>
+                    </div>
+                </div>
+
+                <div class="model-charts-row">
+                    <!-- Feature Importance -->
+                    <div class="model-chart-box">
+                        <h4><i class="fas fa-sort-amount-down" style="color:#0ea5e9"></i> Feature Importances</h4>
+                        <div class="fi-bar-wrap" id="fiBars"></div>
+                    </div>
+                    <!-- Actual vs Predicted -->
+                    <div class="model-chart-box">
+                        <h4><i class="fas fa-bullseye" style="color:#10b981"></i> Actual vs Predicted (last 30 days)</h4>
+                        <canvas id="avpChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+    </div>
     </div>
 
     <script>
@@ -942,6 +1075,91 @@
 
         fetchDashboardData();
         setInterval(fetchDashboardData, 5000);
+
+        // ═══ MODEL SCORE ════════════════════════════════════════════
+        async function fetchModelScore() {
+            try {
+                const res  = await fetch('/api/model-score');
+                const data = await res.json();
+                if (data.error) { console.error('Model score error:', data.error); return; }
+
+                // Score cards
+                const r2 = data.r2_score;
+                document.getElementById('msR2').textContent   = r2.toFixed(4);
+                document.getElementById('msMAE').textContent  = data.mae.toFixed(4);
+                document.getElementById('msRMSE').textContent = data.rmse.toFixed(4);
+                document.getElementById('msN').textContent    = data.n_samples;
+                document.getElementById('msAlgo').textContent = (data.model_type || '').replace(/([A-Z])/g, ' $1').trim();
+                document.getElementById('msModelType').textContent = data.model_type || '';
+
+                // Colour the R2 card
+                const r2card = document.getElementById('ms_r2_card');
+                r2card.classList.remove('good','warn');
+                if (r2 >= 0.7) r2card.classList.add('good');
+                else if (r2 >= 0.4) r2card.classList.add('warn');
+
+                // Feature importance bars
+                const fi   = data.feature_importances;
+                const keys = Object.keys(fi);
+                const maxV = Math.max(...Object.values(fi));
+                const container = document.getElementById('fiBars');
+                container.innerHTML = '';
+                keys.forEach(k => {
+                    const pct = ((fi[k] / maxV) * 100).toFixed(1);
+                    const niceName = k.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+                    container.innerHTML += `
+                        <div class="fi-row">
+                            <div class="fi-label" title="${niceName}">${niceName}</div>
+                            <div class="fi-bar-bg"><div class="fi-bar-fill" style="width:${pct}%"></div></div>
+                            <div class="fi-pct">${(fi[k]*100).toFixed(1)}%</div>
+                        </div>`;
+                });
+
+                // Actual vs Predicted scatter
+                const avp = data.predictions_vs_actual || [];
+                if (avp.length > 0) {
+                    if (window._avpChart) window._avpChart.destroy();
+                    const ctx = document.getElementById('avpChart').getContext('2d');
+                    const allVals = [...avp.map(p=>p.actual), ...avp.map(p=>p.predicted)];
+                    const minV = Math.min(...allVals), maxV2 = Math.max(...allVals);
+                    window._avpChart = new Chart(ctx, {
+                        type: 'scatter',
+                        data: {
+                            datasets: [
+                                {
+                                    label: 'Predicted vs Actual',
+                                    data: avp.map(p => ({x: p.actual, y: p.predicted})),
+                                    backgroundColor: 'rgba(14,165,233,0.55)',
+                                    borderColor: '#0ea5e9',
+                                    pointRadius: 5
+                                },
+                                {
+                                    label: 'Perfect fit',
+                                    data: [{x:minV,y:minV},{x:maxV2,y:maxV2}],
+                                    type: 'line',
+                                    borderColor: '#10b981',
+                                    borderDash: [6,3],
+                                    borderWidth: 1.5,
+                                    pointRadius: 0,
+                                    fill: false
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+                            scales: {
+                                x: { title: { display: true, text: 'Actual (kWh)', font:{size:11} } },
+                                y: { title: { display: true, text: 'Predicted (kWh)', font:{size:11} } }
+                            }
+                        }
+                    });
+                }
+            } catch(e) { console.error('fetchModelScore failed:', e); }
+        }
+
+        fetchModelScore();
     </script>
 </body>
 </html>
