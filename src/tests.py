@@ -3,7 +3,7 @@ Unit and integration tests for Solar Analytics
 """
 import pytest
 import pandas as pd
-from utils import validate_prediction_input, prepare_prediction_row, calculate_kpis
+from .utils import validate_prediction_input, prepare_prediction_row, calculate_kpis
 
 
 class TestInputValidation:

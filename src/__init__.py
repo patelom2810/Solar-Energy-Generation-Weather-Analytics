@@ -1,0 +1,3 @@
+"""
+Solar Analytics Application Package
+"""
