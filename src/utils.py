@@ -50,10 +50,13 @@ def validate_prediction_input(data):
     is_weekend = data.get('is_weekend', False)
     if not isinstance(is_weekend, (bool, int)) or (isinstance(is_weekend, int) and is_weekend not in [0, 1]):
         errors.append(f"is_weekend must be boolean or 0/1, got {type(is_weekend).__name__}")
+        valid_weekend = 0
+    else:
+        valid_weekend = int(is_weekend)
     
     validated_data = {
         'season': season,
-        'is_weekend': int(is_weekend)
+        'is_weekend': valid_weekend
     }
     
     return len(errors) == 0, errors, validated_data

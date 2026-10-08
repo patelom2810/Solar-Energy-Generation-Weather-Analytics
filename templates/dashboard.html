@@ -128,19 +128,6 @@
         .section-title { font-size: 20px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 14px; letter-spacing: -0.5px; }
         .section-title i { background: -webkit-linear-gradient(45deg, var(--accent-blue), var(--accent-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
-        /* Predictions */
-        .predictions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px; }
-        .prediction-stat { padding: 16px; text-align: center; }
-        .prediction-stat-label { font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: 700; }
-        .prediction-stat-value { font-size: 32px; font-weight: 800; background: linear-gradient(45deg, var(--text-main), var(--accent-blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-
-        .predictions-table { overflow-x: auto; border-radius: 16px; border: 1px solid var(--border-glass); background: rgba(255,255,255,0.4); backdrop-filter: blur(10px); }
-        table { width: 100%; border-collapse: collapse; font-size: 15px; }
-        thead { background: rgba(255, 255, 255, 0.5); border-bottom: 1px solid var(--border-glass); }
-        th { padding: 20px 24px; text-align: left; color: var(--text-muted); font-weight: 700; text-transform: uppercase; font-size: 13px; letter-spacing: 1px; }
-        td { padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.3); color: var(--text-main); font-weight: 500; }
-        tbody tr { transition: background 0.3s; }
-        tbody tr:hover { background: rgba(255, 255, 255, 0.6); }
 
         /* Model Score */
         .model-score-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px; }
@@ -237,31 +224,6 @@
             </div>
         </section>
 
-        <section class="section-card">
-            <div class="section-title"><i class="fas fa-brain"></i> ML Predictions Analytics</div>
-            <div class="predictions-grid">
-                <div class="prediction-stat"><div class="prediction-stat-label">Latest Prediction</div><div class="prediction-stat-value" id="latestPrediction">-</div></div>
-                <div class="prediction-stat"><div class="prediction-stat-label">Today's Count</div><div class="prediction-stat-value" id="todayPredictions">-</div></div>
-                <div class="prediction-stat"><div class="prediction-stat-label">Avg Generation</div><div class="prediction-stat-value" id="avgPrediction">-</div></div>
-                <div class="prediction-stat"><div class="prediction-stat-label">Total Predictions</div><div class="prediction-stat-value" id="totalPredictions">-</div></div>
-                <div class="prediction-stat"><div class="prediction-stat-label">Model Accuracy</div><div class="prediction-stat-value" id="modelAccuracy">-</div></div>
-                <div class="prediction-stat"><div class="prediction-stat-label">Avg Range (kWh)</div><div class="prediction-stat-value" id="predictionRange" style="font-size: 20px;">-</div></div>
-            </div>
-            <div style="margin-top: 30px;">
-                <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 16px; color: var(--text-main);"><i class="fas fa-history"></i> Recent Predictions</h3>
-                <div class="predictions-table">
-                    <table>
-                        <thead>
-                            <tr><th>ID</th><th>Predicted</th><th>Radiation</th><th>Cloud %</th><th>Temp</th><th>Season</th></tr>
-                        </thead>
-                        <tbody id="predictionsTableBody">
-                            <tr><td colspan="6" style="text-align: center; padding: 20px;">Loading...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
         <section class="section-card" id="modelScoreSection">
             <div class="section-title">
                 <i class="fas fa-robot"></i> Model Performance — Gradient Boosting Regressor
@@ -316,79 +278,9 @@
                 const data = await response.json();
                 updateDashboard(data);
                 updateCharts(data);
-                // Fetch predictions history separately
-                await fetchPredictionsHistory();
             } catch (error) {
                 console.error('Error:', error);
             }
-        }
-
-        async function fetchPredictionsHistory() {
-            try {
-                const response = await fetch('/history?limit=10');
-                const data = await response.json();
-                updatePredictionsTable(data.predictions);
-                updatePredictionStats(data.predictions);
-            } catch (error) {
-                console.error('Error fetching predictions:', error);
-            }
-        }
-
-        function updatePredictionsTable(predictions) {
-            const tbody = document.getElementById('predictionsTableBody');
-            
-            if (!predictions || predictions.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-secondary);"><i class="fas fa-inbox"></i> No predictions yet</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = predictions.map(pred => `
-                <tr>
-                    <td><strong>#${pred.id}</strong></td>
-                    <td><strong>${pred.predicted_kwh.toFixed(2)} kWh</strong></td>
-                    <td>${(pred.shortwave_radiation ?? '-')}</td>
-                    <td>${pred.cloud_cover != null ? pred.cloud_cover.toFixed(0) + '%' : '-'}</td>
-                    <td>${pred.temperature_2m != null ? pred.temperature_2m.toFixed(1) + '°C' : '-'}</td>
-                    <td>${pred.season}</td>
-                </tr>
-            `).join('');
-        }
-
-        function updatePredictionStats(predictions) {
-            if (!predictions || predictions.length === 0) {
-                document.getElementById('latestPrediction').textContent = '-';
-                document.getElementById('todayPredictions').textContent = '0';
-                document.getElementById('avgPrediction').textContent = '-';
-                document.getElementById('totalPredictions').textContent = '0';
-                document.getElementById('modelAccuracy').textContent = '-';
-                document.getElementById('predictionRange').textContent = '-';
-                return;
-            }
-
-            const latest = predictions[0];
-            const avgGen = predictions.reduce((sum, p) => sum + p.predicted_kwh, 0) / predictions.length;
-            const minGen = Math.min(...predictions.map(p => p.predicted_kwh));
-            const maxGen = Math.max(...predictions.map(p => p.predicted_kwh));
-
-            document.getElementById('latestPrediction').textContent = latest.predicted_kwh.toFixed(2) + ' kWh';
-            document.getElementById('todayPredictions').textContent = predictions.filter(p => isToday(new Date(p.timestamp))).length;
-            document.getElementById('avgPrediction').textContent = avgGen.toFixed(2) + ' kWh';
-            document.getElementById('totalPredictions').textContent = predictions.length;
-            
-            // Calculate model accuracy (based on variance and consistency)
-            const variance = predictions.reduce((sum, p) => sum + Math.pow(p.predicted_kwh - avgGen, 2), 0) / predictions.length;
-            const stdDev = Math.sqrt(variance);
-            const accuracy = Math.max(0, Math.min(100, 100 - (stdDev * 2)));
-            document.getElementById('modelAccuracy').textContent = accuracy.toFixed(0) + '%';
-            
-            document.getElementById('predictionRange').textContent = minGen.toFixed(1) + ' - ' + maxGen.toFixed(1);
-        }
-
-        function isToday(date) {
-            const today = new Date();
-            return date.getDate() === today.getDate() &&
-                   date.getMonth() === today.getMonth() &&
-                   date.getFullYear() === today.getFullYear();
         }
 
         function updateDashboard(data) {

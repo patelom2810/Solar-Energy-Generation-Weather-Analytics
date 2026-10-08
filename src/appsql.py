@@ -34,6 +34,25 @@ def init_connection_pool():
         logger.info("✓ Connection pool initialized")
         return True
     except Error as e:
+        # If database does not exist, attempt to create it and retry pool initialization
+        if getattr(e, 'errno', None) == 1049 or 'Unknown database' in str(e):
+            try:
+                temp_config = {k: v for k, v in DB_CONFIG.items() if k != 'database'}
+                temp_conn = mysql.connector.connect(**temp_config)
+                temp_cursor = temp_conn.cursor()
+                temp_cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{DB_CONFIG['database']}`")
+                temp_cursor.close()
+                temp_conn.close()
+                db_pool = pooling.MySQLConnectionPool(
+                    pool_name='solar_pool',
+                    pool_size=5,
+                    pool_reset_session=True,
+                    **DB_CONFIG
+                )
+                logger.info("✓ Database created and connection pool initialized")
+                return True
+            except Exception as e2:
+                logger.error(f"✗ Failed to auto-create database: {e2}")
         logger.error(f"✗ Connection pool error: {e}", exc_info=True)
         return False
 

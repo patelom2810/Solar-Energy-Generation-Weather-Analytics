@@ -15,12 +15,12 @@ fi
 source venv/bin/activate
 
 # Kill any existing Flask processes
-pkill -f "python app.py" 2>/dev/null
+pkill -9 -f "app.py" 2>/dev/null
 sleep 1
 
 # Start Flask server
 echo "📡 Starting Flask server on http://127.0.0.1:8000"
-python app.py &
+python app.py > /tmp/flask.log 2>&1 &
 
 # Wait for server to start
 sleep 3
