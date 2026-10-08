@@ -1,9 +1,9 @@
 {
-  "run_id": "run_20261008_194536_2bcb50",
+  "run_id": "run_20261008_231310_c15edb",
   "status": "success",
-  "start_time": "2026-10-08T19:45:36.653481",
-  "end_time": "2026-10-08T19:45:37.607751",
-  "duration_seconds": 0.95,
+  "start_time": "2026-10-08T23:13:10.319823",
+  "end_time": "2026-10-08T23:13:12.084210",
+  "duration_seconds": 1.76,
   "records_processed": {
     "dim_date": 91,
     "fact_solar_daily": 91,
@@ -13,21 +13,53 @@
   },
   "retrain_summary": {
     "retrained": true,
-    "improved": false,
+    "improved": true,
+    "best_candidate_name": "Huber_Robust",
     "candidate_metrics": {
-      "rmse": 6.0234,
-      "mae": 2.8549,
-      "r2": -4.9515
+      "rmse": 2.7683,
+      "mae": 2.2147,
+      "r2": -0.2571,
+      "mape": 5.55
     },
     "current_metrics": {
-      "rmse": 5.3524,
-      "mae": 4.8165,
-      "r2": -3.6994
+      "rmse": 5.2338,
+      "mae": 2.5509,
+      "r2": -3.4935,
+      "mape": 6.53
+    },
+    "tournament_results": {
+      "Huber_Robust": {
+        "rmse": 2.7683,
+        "mae": 2.2147,
+        "r2": -0.2571,
+        "mape": 5.55
+      },
+      "Ensemble_Hybrid": {
+        "rmse": 3.1865,
+        "mae": 2.4491,
+        "r2": -0.6656,
+        "mape": 6.08
+      },
+      "Tuned_GBR": {
+        "rmse": 4.473,
+        "mae": 3.373,
+        "r2": -2.2821,
+        "mape": 8.36
+      },
+      "Ridge_Scaled": {
+        "rmse": 3.7053,
+        "mae": 2.9683,
+        "r2": -1.2521,
+        "mape": 7.31
+      }
     },
     "samples_evaluated": 19,
-    "timestamp": "2026-10-08T19:45:37.607631",
-    "message": "Current production model outperformed candidate. Retained existing model."
+    "timestamp": "2026-10-08T23:13:12.080435",
+    "model_version": "v20261008_231312",
+    "versioned_path": "models/solar_generation_model_v20261008_231312.pkl",
+    "rmse_reduction_pct": 47.11,
+    "message": "Production model updated to Huber_Robust with 47.11% RMSE reduction."
   },
   "error_message": null,
-  "timestamp": "2026-10-08T19:45:37.607751"
+  "timestamp": "2026-10-08T23:13:12.084210"
 }

@@ -4,10 +4,9 @@ Cleans, dedupes, validates value ranges, builds the dim_date calendar dimension,
 merges daily solar + weather, and computes engineered features using src/features.py.
 """
 import logging
-import numpy as np
+from typing import Dict
 import pandas as pd
-from typing import Dict, Any, Tuple
-from src.features import compute_engineered_features, FEATURE_NAMES, encode_season
+from src.features import compute_engineered_features, FEATURE_NAMES
 
 logger = logging.getLogger(__name__)
 

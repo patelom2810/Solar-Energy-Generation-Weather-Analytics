@@ -8,8 +8,7 @@ import os
 import uuid
 import logging
 import argparse
-from datetime import datetime, date, timedelta
-from typing import Optional
+from datetime import datetime
 from dotenv import load_dotenv
 
 # Ensure root directory is on PYTHONPATH

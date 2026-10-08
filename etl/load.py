@@ -277,17 +277,23 @@ def load_all(
     ]
     
     # 1. Idempotent upserts to MySQL
+    conn = None
     try:
         conn = get_db_connection()
         for tbl, pk in table_configs:
             df = transformed_data.get(tbl)
             if df is not None and len(df) > 0:
                 counts[tbl] = upsert_table(df, tbl, pk, conn=conn)
-        conn.close()
     except Exception as e:
         logger.error(f"MySQL upsert failed: {e}. Proceeding to CSV refresh...", exc_info=True)
         for tbl, _ in table_configs:
             counts[tbl] = len(transformed_data.get(tbl, []))
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
             
     # 2. Refresh CSVs on disk
     refresh_csv_files(transformed_data, data_dir=data_dir)

@@ -51,6 +51,7 @@ logs/
 
 # Models (if large)
 # models/*.pkl
+models/solar_generation_model_v*.pkl
 
 # Database
 *.db

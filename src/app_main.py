@@ -1,11 +1,11 @@
 from flask import Flask, request, jsonify, render_template
-import joblib, numpy as np, pandas as pd
-from .appsql import log_prediction, get_prediction_history, get_prediction_stats, init_db, init_connection_pool
-from datetime import datetime, timedelta
-from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error, mean_absolute_percentage_error
 import os
+import joblib
+import pandas as pd
 import logging
 import threading
+from datetime import datetime
+from .appsql import log_prediction, get_prediction_history, get_prediction_stats, init_db, init_connection_pool
 from .api_docs import API_DOCS
 
 # Configure logging
@@ -69,6 +69,7 @@ def before_request():
         _startup()
 
 from .features import compute_engineered_features, FEATURE_NAMES
+from .models import compute_model_scores
 
 # ── Cache model scores so we only compute once ──────────────────────────
 _model_score_cache = None
@@ -78,29 +79,10 @@ def _compute_model_scores():
     if _model_score_cache is not None:
         return _model_score_cache
     try:
-        solar   = pd.read_csv('data/fact_solar_daily.csv')
+        solar = pd.read_csv('data/fact_solar_daily.csv')
         weather = pd.read_csv('data/fact_weather_daily.csv')
-        merged  = solar.merge(weather, on='date', how='inner')
-        merged  = compute_engineered_features(merged)
         feats_to_use = FEATS if FEATS is not None else FEATURE_NAMES
-        X = merged[feats_to_use]
-        y = merged['generation_kwh']
-        preds = model.predict(X)
-        fi = dict(zip(feats_to_use, [float(x) for x in model.feature_importances_]))
-        _model_score_cache = {
-            'model_type': type(model).__name__,
-            'r2_score':   round(float(r2_score(y, preds)), 4),
-            'mae':        round(float(mean_absolute_error(y, preds)), 4),
-            'rmse':       round(float(np.sqrt(mean_squared_error(y, preds))), 4),
-            'mse':        round(float(mean_squared_error(y, preds)), 4),
-            'mape':       round(float(mean_absolute_percentage_error(y, preds)) * 100, 2),
-            'n_samples':  int(len(y)),
-            'feature_importances': dict(sorted(fi.items(), key=lambda x: -x[1])),
-            'predictions_vs_actual': [
-                {'actual': round(float(a), 3), 'predicted': round(float(p), 3)}
-                for a, p in zip(y.tail(30).values, preds[-30:])
-            ]
-        }
+        _model_score_cache = compute_model_scores(model, feats_to_use, solar, weather)
     except Exception as e:
         _model_score_cache = {'error': str(e)}
     return _model_score_cache
@@ -362,22 +344,11 @@ def predict():
             logger.warning(f"Validation failed for predict: {errors}")
             return jsonify({'error': 'Validation failed', 'details': errors}), 400
         
-        # Build DataFrame in correct feature order
-        row = {
-            'shortwave_radiation_sum': data.get('shortwave_radiation_sum', 24.0),
-            'sunshine_duration':       data.get('sunshine_duration', 38000),
-            'cloud_cover_mean':        data.get('cloud_cover_mean', 30.0),
-            'temperature_2m_mean':     data.get('temperature_2m_mean', 26.0),
-            'wind_speed_10m_mean':     data.get('wind_speed_10m_mean', 18.0),
-            'rain_sum':                data.get('rain_sum', 0.0),
-            'season_enc':              1 if season == 'Wet' else 0,
-            'is_weekend_enc':          int(is_weekend),
-            'sunshine_ratio':          data.get('sunshine_duration', 38000) / 86400,
-            'rad_clear':               data.get('shortwave_radiation_sum', 24.0) *
-                                       (1 - data.get('cloud_cover_mean', 30) / 100),
-        }
+        # Build feature dictionary using shared feature utility
+        from .utils import prepare_prediction_row
+        row = prepare_prediction_row(data, season=season, is_weekend=is_weekend)
         X = pd.DataFrame([row])[FEATS]
-        pred = float(model.predict(X)[0])
+        pred = max(0.0, float(model.predict(X)[0]))
         
         # Prepare data for database logging
         log_data = {

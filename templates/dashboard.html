@@ -226,7 +226,7 @@
 
         <section class="section-card" id="modelScoreSection">
             <div class="section-title">
-                <i class="fas fa-robot"></i> Model Performance — Gradient Boosting Regressor
+                <i class="fas fa-robot"></i> Model Performance & AI Metrics
                 <span id="msModelType" style="margin-left:auto;font-size:12px;font-weight:600;color:var(--accent-cyan);background:rgba(6,182,212,0.1);padding:4px 12px;border-radius:20px;border:1px solid rgba(6,182,212,0.2);"></span>
             </div>
             <div class="model-score-grid">
@@ -260,6 +260,33 @@
                 </div>
             </div>
         </section>
+
+        <!-- Dynamic Live Predictions Feed -->
+        <section class="section-card" id="historySection">
+            <div class="section-title">
+                <i class="fas fa-history"></i> Recent Live Predictions
+                <span style="margin-left:auto;font-size:12px;font-weight:600;color:var(--success);background:rgba(16,185,129,0.1);padding:4px 12px;border-radius:20px;border:1px solid rgba(16,185,129,0.2);"><i class="fas fa-circle" style="font-size:8px;"></i> Live Sync</span>
+            </div>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;" id="predictionsTable">
+                    <thead>
+                        <tr style="border-bottom: 2px solid rgba(0,0,0,0.06); text-align: left; color: var(--text-muted);">
+                            <th style="padding: 10px 8px;">Time</th>
+                            <th style="padding: 10px 8px;">Predicted</th>
+                            <th style="padding: 10px 8px;">Rad (W/m²)</th>
+                            <th style="padding: 10px 8px;">Sunshine (s)</th>
+                            <th style="padding: 10px 8px;">Cloud (%)</th>
+                            <th style="padding: 10px 8px;">Temp (°C)</th>
+                            <th style="padding: 10px 8px;">Season</th>
+                            <th style="padding: 10px 8px;">Type</th>
+                        </tr>
+                    </thead>
+                    <tbody id="predictionsTableBody">
+                        <tr><td colspan="8" style="text-align:center; padding:16px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading predictions...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
     </main>
 
     <script>
@@ -285,12 +312,27 @@
 
         function updateDashboard(data) {
             document.getElementById('kpiGeneration').textContent = data.total_generation.toFixed(2) + ' kWh';
-            document.getElementById('kpiGenerationChange').textContent = (data.generation_change * 100).toFixed(1) + '%';
+            const genChange = data.generation_change;
+            document.getElementById('kpiGenerationChange').innerHTML = 
+                `<i class="fas fa-arrow-${genChange >= 0 ? 'up' : 'down'}"></i> ${(Math.abs(genChange) * 100).toFixed(1)}%`;
+            
             document.getElementById('kpiConsumption').textContent = data.total_consumption.toFixed(2) + ' kWh';
-            document.getElementById('kpiConsumptionChange').textContent = (data.consumption_change * 100).toFixed(1) + '%';
+            const conChange = data.consumption_change;
+            document.getElementById('kpiConsumptionChange').innerHTML = 
+                `<i class="fas fa-arrow-${conChange >= 0 ? 'up' : 'down'}"></i> ${(Math.abs(conChange) * 100).toFixed(1)}%`;
+            
             document.getElementById('kpiSelfSufficiency').textContent = data.self_sufficiency.toFixed(1) + '%';
+            const ssChange = data.self_sufficiency_change;
+            const ssEl = document.getElementById('kpiSelfSufficiencyChange');
+            if (ssEl) {
+                ssEl.innerHTML = `<i class="fas fa-arrow-${ssChange >= 0 ? 'up' : 'down'}"></i> ${(Math.abs(ssChange) * 100).toFixed(1)}% vs prev week`;
+            }
+
             document.getElementById('kpiTemperature').textContent = data.avg_temperature.toFixed(1) + '°C';
-            document.getElementById('kpiTemperatureChange').textContent = (data.temperature_change > 0 ? '↑' : '↓') + ' ' + Math.abs(data.temperature_change).toFixed(2) + '°C';
+            const tempDiff = data.temperature_change;
+            document.getElementById('kpiTemperatureChange').innerHTML = 
+                `<i class="fas fa-arrow-${tempDiff >= 0 ? 'up' : 'down'}"></i> ${Math.abs(tempDiff).toFixed(2)}°C`;
+            
             document.getElementById('kpiPredictions').textContent = data.total_predictions;
             document.getElementById('kpiPredictionsChange').textContent = data.predictions_made_today + ' today';
         }
@@ -438,12 +480,43 @@
             }, 3000);
         }
 
-        fetchDashboardData();
-        setInterval(() => {
-            fetchDashboardData();
-            showToast('Dashboard live updated', 'fa-sync-alt');
-        }, 15000);
+        async function fetchPredictionHistory() {
+            try {
+                const res = await fetch('/history?limit=6');
+                const data = await res.json();
+                const tbody = document.getElementById('predictionsTableBody');
+                if (!tbody) return;
+                
+                const preds = data.predictions || [];
+                if (preds.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:16px; color:var(--text-muted);"><i class="fas fa-info-circle"></i> No predictions logged yet. Try generating one!</td></tr>';
+                    return;
+                }
 
+                tbody.innerHTML = preds.map(p => {
+                    const timeStr = p.timestamp ? new Date(p.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : '–';
+                    const kwh = typeof p.predicted_kwh === 'number' ? p.predicted_kwh.toFixed(2) : p.predicted_kwh;
+                    const seasonBadge = p.season === 'Wet' 
+                        ? '<span style="color:#0284c7;background:rgba(2,132,199,0.1);padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;">Wet</span>'
+                        : '<span style="color:#d97706;background:rgba(217,119,6,0.1);padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;">Dry</span>';
+                    const typeBadge = p.is_weekend ? '<span style="color:#7c3aed;font-weight:600;"><i class="fas fa-calendar-week"></i> Weekend</span>' : '<span style="color:var(--text-muted);"><i class="fas fa-briefcase"></i> Weekday</span>';
+                    return `
+                        <tr style="border-bottom: 1px solid rgba(0,0,0,0.05); transition: background 0.2s;">
+                            <td style="padding: 12px 8px; color: var(--text-muted); font-size: 12px; font-weight: 500;">${timeStr}</td>
+                            <td style="padding: 12px 8px; font-weight: 800; color: #ef4444; font-size: 14px;">${kwh} kWh</td>
+                            <td style="padding: 12px 8px;">${p.shortwave_radiation !== undefined ? (+p.shortwave_radiation).toFixed(1) : '–'}</td>
+                            <td style="padding: 12px 8px;">${p.sunshine_duration !== undefined ? (+p.sunshine_duration).toLocaleString() : '–'}</td>
+                            <td style="padding: 12px 8px;">${p.cloud_cover !== undefined ? (+p.cloud_cover).toFixed(0) + '%' : '–'}</td>
+                            <td style="padding: 12px 8px;">${p.temperature_2m !== undefined ? (+p.temperature_2m).toFixed(1) : '–'}</td>
+                            <td style="padding: 12px 8px;">${seasonBadge}</td>
+                            <td style="padding: 12px 8px; font-size: 12px;">${typeBadge}</td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch(e) {
+                console.error('fetchPredictionHistory failed:', e);
+            }
+        }
 
         // ═══ MODEL SCORE ════════════════════════════════════════════
         async function fetchModelScore() {
@@ -529,7 +602,18 @@
             } catch(e) { console.error('fetchModelScore failed:', e); }
         }
 
+        // Initial load
+        fetchDashboardData();
         fetchModelScore();
+        fetchPredictionHistory();
+
+        // 15-second dynamic polling sync
+        setInterval(() => {
+            fetchDashboardData();
+            fetchModelScore();
+            fetchPredictionHistory();
+            showToast('Dashboard live updated', 'fa-sync-alt');
+        }, 15000);
     </script>
 </body>
 </html>

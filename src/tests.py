@@ -330,10 +330,142 @@ class TestModelManager:
         assert 'r2_score' in scores
         assert 'rmse' in scores
         assert 'mae' in scores
+        assert 'feature_importances' in scores
+        assert len(scores['feature_importances']) == 10
         assert scores['n_samples'] > 0
+
+    def test_model_manager_non_negative_predictions(self):
+        from src.models import ModelManager
+        
+        mm = ModelManager()
+        # Test with zero/dark features
+        X_zero = pd.DataFrame([{f: 0.0 for f in mm.get_feature_names()}])
+        pred = mm.predict(X_zero)
+        assert pred is not None
+        assert pred >= 0.0
+
+
+class TestFeatureImportanceExtraction:
+    """Test feature importance extraction across heterogeneous model types"""
+
+    def test_tree_model_importances(self):
+        from sklearn.ensemble import GradientBoostingRegressor
+        from src.models import extract_model_feature_importances
+        import numpy as np
+        
+        feats = ['f1', 'f2', 'f3']
+        X = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9], [2, 3, 4]])
+        y = np.array([10, 20, 30, 15])
+        gbr = GradientBoostingRegressor().fit(X, y)
+        
+        fi = extract_model_feature_importances(gbr, feats)
+        assert len(fi) == 3
+        assert pytest.approx(sum(fi.values()), rel=1e-2) == 1.0
+
+    def test_pipeline_linear_importances(self):
+        from sklearn.linear_model import HuberRegressor
+        from sklearn.preprocessing import RobustScaler
+        from sklearn.pipeline import Pipeline
+        from src.models import extract_model_feature_importances
+        import numpy as np
+        
+        feats = ['f1', 'f2', 'f3']
+        X = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9], [2, 3, 4]])
+        y = np.array([10, 20, 30, 15])
+        pipe = Pipeline([('scaler', RobustScaler()), ('reg', HuberRegressor(max_iter=500))]).fit(X, y)
+        
+        fi = extract_model_feature_importances(pipe, feats)
+        assert len(fi) == 3
+        assert pytest.approx(sum(fi.values()), rel=1e-2) == 1.0
+
+    def test_voting_ensemble_importances(self):
+        from sklearn.ensemble import GradientBoostingRegressor, VotingRegressor
+        from sklearn.linear_model import HuberRegressor
+        from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import RobustScaler
+        from src.models import extract_model_feature_importances
+        import numpy as np
+        
+        feats = ['f1', 'f2', 'f3']
+        X = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9], [2, 3, 4]])
+        y = np.array([10, 20, 30, 15])
+        m1 = GradientBoostingRegressor().fit(X, y)
+        m2 = Pipeline([('scaler', RobustScaler()), ('reg', HuberRegressor(max_iter=500))]).fit(X, y)
+        vote = VotingRegressor([('m1', m1), ('m2', m2)]).fit(X, y)
+        
+        fi = extract_model_feature_importances(vote, feats)
+        assert len(fi) == 3
+        assert pytest.approx(sum(fi.values()), rel=1e-2) == 1.0
+
+
+class TestModelRetrainingTournament:
+    """Test model retraining tournament logic and fairness"""
+
+    def test_candidate_models_building(self):
+        from etl.retrain import build_candidate_models
+        
+        candidates = build_candidate_models()
+        assert 'Huber_Robust' in candidates
+        assert 'Ensemble_Hybrid' in candidates
+        assert 'Tuned_GBR' in candidates
+        assert 'Ridge_Scaled' in candidates
+
+    def test_retraining_tournament_execution(self):
+        from etl.retrain import evaluate_and_retrain_model
+        from src.features import compute_engineered_features
+        
+        solar = pd.read_csv('data/fact_solar_daily.csv')
+        weather = pd.read_csv('data/fact_weather_daily.csv')
+        df_feat = compute_engineered_features(solar.merge(weather, on='date'))
+        
+        res = evaluate_and_retrain_model(df_feat, force_update=False)
+        assert res['retrained'] is True
+        assert 'candidate_metrics' in res
+        assert 'current_metrics' in res
+        assert 'tournament_results' in res
+        assert res['candidate_metrics']['rmse'] > 0
+        assert res['current_metrics']['rmse'] > 0
+
+
+class TestPredictionAPIEndpoint:
+    """Test Flask /predict and /api/model-score endpoints"""
+
+    def test_predict_endpoint_success(self):
+        from src.app_main import app
+        
+        client = app.test_client()
+        payload = {
+            'shortwave_radiation_sum': 25.0,
+            'sunshine_duration': 39000,
+            'cloud_cover_mean': 30.0,
+            'temperature_2m_mean': 26.0,
+            'wind_speed_10m_mean': 17.5,
+            'rain_sum': 0.0,
+            'season': 'Dry',
+            'is_weekend': False
+        }
+        resp = client.post('/predict', json=payload)
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert 'predicted_generation_kwh' in data
+        assert data['predicted_generation_kwh'] >= 0.0
+        assert data['status'] in ['Low', 'Normal']
+
+    def test_model_score_endpoint(self):
+        from src.app_main import app
+        
+        client = app.test_client()
+        resp = client.get('/api/model-score')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert 'r2_score' in data
+        assert 'rmse' in data
+        assert 'mae' in data
+        assert 'feature_importances' in data
 
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
 
 

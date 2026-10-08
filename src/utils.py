@@ -3,7 +3,6 @@ Utility functions for Solar Analytics application
 """
 import logging
 import pandas as pd
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 

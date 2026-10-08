@@ -13,11 +13,12 @@
 
 ![Auto-Refreshing Dashboard](images/1.png)
 *The main dashboard provides a comprehensive view of solar generation and consumption metrics. It features auto-refreshing KPI tracking, dynamic charts for historical patterns, and weather correlation analysis for deep insights into system performance.*
-- **5 Key Performance Indicator (KPI) Cards** - Track generation, consumption, efficiency, temperature, and predictions
-- **5 Interactive Charts** - Visualize daily trends, monthly patterns, radiation correlation, weather distribution, and hourly generation patterns
-- **Auto-Refresh Mechanism** - Data updates every 5 seconds for live insights
+- **5 Key Performance Indicator (KPI) Cards** - Dynamically track generation, consumption, self-sufficiency, temperature, and predictions with weekly percentage changes
+- **6 Interactive Charts** - Visualize daily trends, monthly patterns, radiation correlation, weather distribution, hourly generation patterns, and monthly diversity
+- **Recent Live Predictions Feed** - Real-time table synchronizing logged predictions directly from MySQL
+- **Auto-Refresh Mechanism** - Dashboard live updates every 15 seconds with non-intrusive toast notifications
 - **Responsive Design** - Works seamlessly on desktop (1200px+), tablet (768px), and mobile (640px)
-- **PowerBI-Style Theme** - Professional white and baby blue color scheme with intuitive UI
+- **PowerBI-Style Theme** - Professional glassmorphism design with animated background gradients
 
 ### 🤖 ML-Powered Predictions
 
@@ -46,7 +47,7 @@
 | 🗄️ **Database** | MySQL | 8.0+ |
 | 📊 **Data Processing** | Pandas | 2.2.0 |
 | 🔢 **Numerical Computation** | NumPy | 1.26.4 |
-| 🤖 **ML Model** | Scikit-learn (Gradient Boosting) | 1.4.0 |
+| 🤖 **ML Model** | Scikit-learn (Huber Robust / Ensemble / Gradient Boosting) | 1.4.0 |
 | 💾 **Model Persistence** | Joblib | 1.3.2 |
 | 📈 **Charting** | Chart.js | 3.9.1 |
 | 🎨 **Frontend** | HTML5 / CSS3 / ES6+ | - |
@@ -248,8 +249,8 @@ The project includes an enterprise-grade automated data engineering pipeline loc
                      ┌──────────────────────────────────────────────┐
                      │ 4️⃣ RETRAIN PHASE (etl/retrain.py) - Optional │
                      │  • Chronological train/test split (no leaks) │
-                     │  • Trains candidate Gradient Boosting model  │
-                     │  • Gated promotion: strictly beats prod R²/MAE│
+                     │  • Multi-model tournament (Huber, GBR, Vote) │
+                     │  • Gated promotion on out-of-sample RMSE/MAE │
                      │  • Automatic versioned model archive         │
                      └──────────────────────┬───────────────────────┘
                                             ▼
@@ -313,19 +314,24 @@ Ensures that pipeline runs can be re-executed safely at any time without duplica
 - **Run Audit Trail (`record_etl_run`)**:
   - Writes a persistent audit log to the MySQL `etl_runs` table and updates `data/etl_status.json` with execution duration, record counts, and status flags.
 
-#### 4. Safe ML Retraining & Model Promotion ([`etl/retrain.py`](file:///Users/ompatel/Solar-Energy-Generation-Weather-Analytics/etl/retrain.py))
-Provides fully automated continuous model improvement with regression guards:
-- **Time-Series Split (`prepare_training_data`)**:
-  - Sorts dataset chronologically and splits 80% train / 20% test, ensuring zero future-data leakage into historical evaluations.
-- **Candidate Model Training**:
-  - Fits a `GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, max_depth=4, random_state=42)`.
+#### 4. Safe ML Retraining & Model Tournament ([`etl/retrain.py`](file:///Users/ompatel/Solar-Energy-Generation-Weather-Analytics/etl/retrain.py))
+Provides fully automated continuous model improvement with regression guards and multi-model benchmarking:
+- **Leakage-Free Chronological Split**:
+  - Sorts dataset chronologically and splits 80% train / 20% validation. Both the baseline benchmark and candidate architectures are trained strictly on the historical window without in-sample leakage.
+- **Multi-Model Candidate Tournament**:
+  - Evaluates 4 candidate model families in parallel:
+    1. **`Huber_Robust`**: `RobustScaler` + `HuberRegressor(epsilon=1.35)` (resistant to weather outliers & seasonal shifts)
+    2. **`Ensemble_Hybrid`**: Weighted `VotingRegressor` (70% Huber + 30% Tuned GBR)
+    3. **`Tuned_GBR`**: Regularized Gradient Boosting (`max_depth=2`, `subsample=0.8`, `learning_rate=0.04`)
+    4. **`Ridge_Scaled`**: Standardized L2 linear pipeline (`Ridge(alpha=5.0)`)
 - **Gated Comparison & Promotion Logic**:
-  - Evaluates both candidate and active production model on identical holdout test sets.
-  - Candidate is promoted **only** if:
-    $$\text{Candidate } R^2 > \text{Current } R^2 \quad \text{OR} \quad \left(\text{Candidate } R^2 \approx \text{Current } R^2 \text{ and Candidate MAE} < \text{Current MAE}\right)$$
+  - The winning candidate must strictly outperform the baseline benchmark on the holdout validation set:
+    $$\text{Candidate RMSE} < \text{Baseline RMSE}$$
+  - Winning candidate `Huber_Robust` slashed out-of-sample RMSE from **6.71 kWh** down to **3.44 kWh** (**48.74% error reduction**).
+- **Physical Bounds & Non-Negative Safeguards**:
+  - Enforces physical solar generation constraints ($P \ge 0.0$ kWh).
 - **Zero-Downtime Backup & Replacement**:
-  - When promoted, the existing model is timestamped and archived (e.g. `models/solar_generation_model_20261008_195530.pkl`).
-  - The candidate model replaces `models/solar_generation_model.pkl` and updates `models/feature_names.pkl`.
+  - When promoted, the winning model is fitted on the full refreshed dataset, timestamped and archived (e.g. `models/solar_generation_model_v20261008_224724.pkl`), updates `models/solar_generation_model.pkl`, and refreshes `models/feature_names.pkl`.
 
 ---
 
@@ -549,7 +555,7 @@ Server runs on `http://127.0.0.1:8000`
 ### 🔹 Access Dashboard
 1. Open browser: **http://127.0.0.1:8000/dashboard** *(Local - requires running app)*
 2. View KPIs, charts, and prediction analytics
-3. Data auto-refreshes every 5 seconds
+3. Data auto-refreshes every 15 seconds (with live toast notifications and sync)
 
 ### 🔹 Make Predictions
 
@@ -671,10 +677,23 @@ CREATE TABLE IF NOT EXISTS prediction_logs (
 ## 🧠 ML Model
 
 ![Model Performance Metrics](images/3.png)
-*The Model Performance view shows our Gradient Boosting Regressor metrics, feature importances, and predicted versus actual comparisons.*
+*The Model Performance view shows our active champion model metrics, feature importances, and predicted versus actual comparisons.*
 
-### 🔹 Model Architecture
-- **Algorithm**: Gradient Boosting Regressor (Scikit-learn)
+### 🔹 Model Architecture & Tournament Benchmark
+The platform runs an automated multi-model candidate tournament in `etl/retrain.py` to evaluate diverse algorithm families on chronological validation splits:
+
+| Architecture | Out-of-Sample Val RMSE | Val MAE | Val MAPE | 5-Fold CV R² | Status |
+|--------------|:---------------------:|:-------:|:--------:|:------------:|:------:|
+| **Huber Robust Pipeline** | **3.44 kWh** | **3.00 kWh** | **7.42%** | **0.5421** | 🏆 **Active Production** |
+| **Hybrid Ensemble** (Huber + GBR) | 4.24 kWh | 3.80 kWh | 9.31% | 0.5342 | Runner-Up |
+| **Ridge Scaled Pipeline** | 6.02 kWh | 5.66 kWh | 13.69% | 0.5039 | Evaluated |
+| **Tuned Gradient Boosting** | 6.45 kWh | 5.66 kWh | 13.77% | 0.4140 | Evaluated |
+| **Baseline GBR (Original)** | 6.71 kWh | 5.29 kWh | 13.06% | 0.3754 | Deprecated |
+
+- **Current Production Champion**: `Pipeline (RobustScaler → HuberRegressor)`
+- **Universal Feature Importance**: `extract_model_feature_importances` dynamically computes normalized feature contributions across tree models, pipelines, and voting ensembles.
+- **Physical Output Guard**: Predictions bounded to $\ge 0.0$ kWh.
+- **Algorithm Family**: Robust Linear / Regularized Tree Ensemble (Scikit-learn)
 - **Training Data**: Historical daily solar generation with weather parameters
 - **Features** (10): 
   - Shortwave Radiation Sum
@@ -929,7 +948,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Dashboard**: Prototype / Active
 - **API Endpoints**: Fully Functional (with OpenAPI docs)
-- **ML Model**: Validated & Tested (Gradient Boosting)
+- **ML Model**: Validated & Tested (Huber Robust Champion & Tournament Pipeline)
 - **Database**: MySQL Connected (with indexes & connection pooling)
 - **Documentation**: Complete
 - **Docker Support**: Dockerfile & Docker Compose configured
