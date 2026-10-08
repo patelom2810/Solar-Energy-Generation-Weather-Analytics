@@ -93,12 +93,9 @@ def compute_model_scores(model, features, solar_daily, weather_daily):
         dict: Model performance metrics
     """
     try:
+        from .features import compute_engineered_features
         merged = solar_daily.merge(weather_daily, on='date', how='inner')
-        merged['date_dt'] = pd.to_datetime(merged['date'])
-        merged['is_weekend_enc'] = merged['date_dt'].dt.dayofweek.isin([5, 6]).astype(int)
-        merged['season_enc'] = merged['date_dt'].dt.month.apply(lambda m: 1 if m in [6, 7, 8, 9, 10, 11] else 0)
-        merged['sunshine_ratio'] = merged['sunshine_duration'] / 86400
-        merged['rad_clear'] = merged['shortwave_radiation_sum'] * (1 - merged['cloud_cover_mean'] / 100)
+        merged = compute_engineered_features(merged)
         
         X = merged[features]
         y = merged['generation_kwh']

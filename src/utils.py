@@ -134,6 +134,7 @@ def calculate_kpis(solar_daily, weather_daily, daily_data):
 def prepare_prediction_row(data, season, is_weekend):
     """
     Prepare feature row for model prediction.
+    Delegates to shared src.features.prepare_single_prediction_features.
     
     Args:
         data (dict): Input data
@@ -143,19 +144,5 @@ def prepare_prediction_row(data, season, is_weekend):
     Returns:
         dict: Feature row for model
     """
-    sunshine_duration = data.get('sunshine_duration', 38000)
-    shortwave_radiation = data.get('shortwave_radiation_sum', 24.0)
-    cloud_cover = data.get('cloud_cover_mean', 30.0)
-    
-    return {
-        'shortwave_radiation_sum': shortwave_radiation,
-        'sunshine_duration': sunshine_duration,
-        'cloud_cover_mean': cloud_cover,
-        'temperature_2m_mean': data.get('temperature_2m_mean', 26.0),
-        'wind_speed_10m_mean': data.get('wind_speed_10m_mean', 18.0),
-        'rain_sum': data.get('rain_sum', 0.0),
-        'season_enc': 1 if season == 'Wet' else 0,
-        'is_weekend_enc': int(is_weekend),
-        'sunshine_ratio': sunshine_duration / 86400,
-        'rad_clear': shortwave_radiation * (1 - cloud_cover / 100),
-    }
+    from .features import prepare_single_prediction_features
+    return prepare_single_prediction_features(data, season=season, is_weekend=is_weekend)

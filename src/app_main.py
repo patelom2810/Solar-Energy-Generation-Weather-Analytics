@@ -68,6 +68,8 @@ def before_request():
     if not _startup_done:
         _startup()
 
+from .features import compute_engineered_features, FEATURE_NAMES
+
 # ── Cache model scores so we only compute once ──────────────────────────
 _model_score_cache = None
 
@@ -79,15 +81,12 @@ def _compute_model_scores():
         solar   = pd.read_csv('data/fact_solar_daily.csv')
         weather = pd.read_csv('data/fact_weather_daily.csv')
         merged  = solar.merge(weather, on='date', how='inner')
-        merged['date_dt'] = pd.to_datetime(merged['date'])
-        merged['is_weekend_enc'] = merged['date_dt'].dt.dayofweek.isin([5,6]).astype(int)
-        merged['season_enc']     = merged['date_dt'].dt.month.apply(lambda m: 1 if m in [6,7,8,9,10,11] else 0)
-        merged['sunshine_ratio'] = merged['sunshine_duration'] / 86400
-        merged['rad_clear']      = merged['shortwave_radiation_sum'] * (1 - merged['cloud_cover_mean'] / 100)
-        X = merged[FEATS]
+        merged  = compute_engineered_features(merged)
+        feats_to_use = FEATS if FEATS is not None else FEATURE_NAMES
+        X = merged[feats_to_use]
         y = merged['generation_kwh']
         preds = model.predict(X)
-        fi = dict(zip(FEATS, [float(x) for x in model.feature_importances_]))
+        fi = dict(zip(feats_to_use, [float(x) for x in model.feature_importances_]))
         _model_score_cache = {
             'model_type': type(model).__name__,
             'r2_score':   round(float(r2_score(y, preds)), 4),
@@ -448,12 +447,24 @@ def health():
             db_status = 'connected'
         except:
             db_status = 'disconnected'
+            
+        # Check ETL status if exists
+        last_etl_run = None
+        etl_status_path = os.path.join(BASE_DIR, 'data', 'etl_status.json')
+        if os.path.exists(etl_status_path):
+            try:
+                import json
+                with open(etl_status_path, 'r') as f:
+                    last_etl_run = json.load(f)
+            except Exception as e_etl:
+                last_etl_run = {'error': str(e_etl)}
         
         logger.info(f"Health check: model=loaded, database={db_status}")
         return jsonify({
             'status': 'healthy',
             'model': 'loaded',
             'database': db_status,
+            'last_etl_run': last_etl_run,
             'timestamp': datetime.now().isoformat()
         })
     except Exception as e:

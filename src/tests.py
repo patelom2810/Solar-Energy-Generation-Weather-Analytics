@@ -81,7 +81,7 @@ class TestPredictionRowPreparation:
         
         assert row['season_enc'] == 0
         assert row['is_weekend_enc'] == 0
-        assert row['sunshine_ratio'] == pytest.approx(39000 / 86400)
+        assert row['sunshine_ratio'] == pytest.approx(39000 / (43200 + 1e-5))
         assert row['rad_clear'] == pytest.approx(25.0 * (1 - 30 / 100))
     
     def test_prepare_prediction_row_wet_season_weekend(self):
@@ -136,5 +136,204 @@ class TestKPICalculation:
         assert 0 <= kpis['self_sufficiency'] <= 200
 
 
+class TestFeatureEngineering:
+    """Test shared feature engineering functions in src/features.py"""
+    
+    def test_compute_engineered_features(self):
+        from src.features import compute_engineered_features, FEATURE_NAMES
+        
+        df = pd.DataFrame({
+            'date': ['2026-02-01', '2026-07-15'],
+            'shortwave_radiation_sum': [25.0, 30.0],
+            'sunshine_duration': [36000.0, 45000.0],
+            'daylight_duration': [43200.0, 50000.0],
+            'cloud_cover_mean': [20.0, 50.0],
+            'temperature_2m_mean': [22.0, 32.0],
+            'wind_speed_10m_mean': [12.0, 15.0],
+            'rain_sum': [0.0, 10.0],
+            'generation_kwh': [40.0, 45.0],
+        })
+        
+        feat_df = compute_engineered_features(df)
+        
+        for f in FEATURE_NAMES:
+            assert f in feat_df.columns, f"Missing feature: {f}"
+            
+        # February = Dry (0), July = Wet (1)
+        assert feat_df.iloc[0]['season_enc'] == 0
+        assert feat_df.iloc[1]['season_enc'] == 1
+        
+        # 2026-02-01 is Sunday (weekend = 1)
+        assert feat_df.iloc[0]['is_weekend_enc'] == 1
+        
+        # rad_clear = 25 * (1 - 20/100) = 20.0
+        assert feat_df.iloc[0]['rad_clear'] == pytest.approx(20.0)
+        assert feat_df.iloc[0]['sunshine_ratio'] == pytest.approx(36000.0 / (43200.0 + 1e-5))
+
+
+class TestETLExtractionMocked:
+    """Test ETL extraction with mocked Open-Meteo responses"""
+    
+    def test_fetch_open_meteo_weather_mocked(self):
+        from unittest.mock import patch, MagicMock
+        from etl.extract import fetch_open_meteo_weather
+        
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            'daily': {
+                'time': ['2026-03-01', '2026-03-02'],
+                'shortwave_radiation_sum': [22.5, 24.1],
+                'sunshine_duration': [38000.0, 40000.0],
+                'daylight_duration': [43200.0, 43200.0],
+                'cloud_cover_mean': [15.0, 25.0],
+                'temperature_2m_mean': [25.0, 26.5],
+                'relative_humidity_2m_mean': [45.0, 50.0],
+                'rain_sum': [0.0, 0.0],
+                'wind_speed_10m_mean': [14.0, 12.0],
+                'weather_code': [0, 1]
+            },
+            'hourly': {
+                'time': ['2026-03-01T00:00', '2026-03-01T01:00'],
+                'relative_humidity_2m': [60.0, 62.0],
+                'wind_speed_10m': [10.0, 11.0],
+                'is_day': [0, 0],
+                'sunshine_duration': [0.0, 0.0],
+                'temperature_2m': [18.0, 17.5],
+                'cloud_cover': [10.0, 12.0],
+                'rain': [0.0, 0.0],
+                'weather_code': [0, 0]
+            }
+        }
+        
+        with patch('requests.Session.get', return_value=mock_response):
+            daily_df, hourly_df = fetch_open_meteo_weather('2026-03-01', '2026-03-02')
+            
+            assert len(daily_df) == 2
+            assert 'date' in daily_df.columns
+            assert daily_df.iloc[0]['date'] == '2026-03-01'
+            assert daily_df.iloc[0]['temperature_2m_mean'] == 25.0
+            
+            assert len(hourly_df) == 2
+            assert 'hour_ts' in hourly_df.columns
+            assert 'date' in hourly_df.columns
+
+
+class TestETLTransformation:
+    """Test ETL transformation logic"""
+    
+    def test_clean_and_validate(self):
+        from etl.transform import clean_and_validate
+        
+        df = pd.DataFrame({
+            'date': ['2026-03-01', '2026-03-01'],  # Duplicate
+            'shortwave_radiation_sum': [25.0, 600.0],  # Out of bounds (>500)
+            'temperature_2m_mean': [26.0, 26.0]
+        })
+        
+        cleaned = clean_and_validate(df, 'test_dataset')
+        # Deduped to 1 row
+        assert len(cleaned) == 1
+        # Clipped to max bound (500)
+        assert cleaned.iloc[0]['shortwave_radiation_sum'] <= 500.0
+
+    def test_build_dim_date(self):
+        from etl.transform import build_dim_date
+        
+        dim_date = build_dim_date(['2026-02-01', '2026-08-15'])
+        assert len(dim_date) == 2
+        
+        feb = dim_date[dim_date['date'] == '2026-02-01'].iloc[0]
+        aug = dim_date[dim_date['date'] == '2026-08-15'].iloc[0]
+        
+        assert feb['date_key'] == 20260201
+        assert feb['month_name'] == 'February'
+        assert feb['season'] == 'Dry'
+        assert bool(feb['is_weekend']) is True
+        
+        assert aug['season'] == 'Wet'
+
+
+class TestETLLoadAndStatus:
+    """Test ETL status reporting and CSV refresh"""
+    
+    def test_refresh_csv_files(self, tmp_path):
+        from etl.load import refresh_csv_files
+        
+        dummy_data = {
+            'dim_date': pd.DataFrame({'date': ['2026-01-01']}),
+            'fact_solar_daily': pd.DataFrame({'date': ['2026-01-01'], 'generation_kwh': [42.0]}),
+        }
+        
+        refresh_csv_files(dummy_data, data_dir=str(tmp_path))
+        
+        assert (tmp_path / 'dim_date.csv').exists()
+        assert (tmp_path / 'fact_solar_daily.csv').exists()
+
+    def test_record_etl_run(self, tmp_path):
+        import json
+        from datetime import datetime
+        from etl.load import record_etl_run
+        
+        status_file = tmp_path / 'etl_status.json'
+        record_etl_run(
+            run_id='test_run_123',
+            start_time=datetime(2026, 1, 1, 10, 0, 0),
+            end_time=datetime(2026, 1, 1, 10, 0, 5),
+            status='success',
+            records_processed={'dim_date': 10},
+            status_file_path=str(status_file)
+        )
+        
+        assert status_file.exists()
+        with open(status_file) as f:
+            data = json.load(f)
+            assert data['run_id'] == 'test_run_123'
+            assert data['status'] == 'success'
+            assert data['records_processed'] == {'dim_date': 10}
+
+
+class TestHealthEndpointETL:
+    """Test that /health returns last_etl_run"""
+    
+    def test_health_includes_last_etl_run(self):
+        from src.app_main import app
+        
+        client = app.test_client()
+        response = client.get('/health')
+        assert response.status_code == 200
+        
+        data = response.get_json()
+        assert 'status' in data
+        assert data['status'] == 'healthy'
+        assert 'last_etl_run' in data
+
+
+class TestModelManager:
+    """Test ModelManager and compute_model_scores in src/models.py"""
+    
+    def test_model_manager_loading(self):
+        from src.models import ModelManager
+        
+        mm = ModelManager()
+        assert mm.is_loaded is True
+        assert len(mm.get_feature_names()) == 10
+
+    def test_compute_model_scores(self):
+        from src.models import ModelManager, compute_model_scores
+        
+        mm = ModelManager()
+        solar = pd.read_csv('data/fact_solar_daily.csv')
+        weather = pd.read_csv('data/fact_weather_daily.csv')
+        
+        scores = compute_model_scores(mm.model, mm.features, solar, weather)
+        assert 'r2_score' in scores
+        assert 'rmse' in scores
+        assert 'mae' in scores
+        assert scores['n_samples'] > 0
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+

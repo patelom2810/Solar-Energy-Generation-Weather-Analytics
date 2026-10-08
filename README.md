@@ -59,22 +59,32 @@
 
 ```
 Solar-Energy-Generation-Weather-Analytics/
+├── 📁 etl/                       # Automated data ingestion & ETL pipeline
+│   ├── __init__.py
+│   ├── extract.py               # Open-Meteo API & raw solar reader
+│   ├── transform.py             # Data cleaning, dim_date builder & feature engineering
+│   ├── load.py                  # Idempotent MySQL upserts & CSV refresh
+│   ├── retrain.py               # Chronological model evaluation & auto-retraining
+│   └── run_pipeline.py          # Unified CLI pipeline runner
 ├── 📁 src/                       # Application source modules
 │   ├── __init__.py              # Package initialization
 │   ├── api_docs.py              # OpenAPI specification
 │   ├── app_main.py              # Core Flask application & routes
 │   ├── appsql.py                # Database connection & queries
 │   ├── config.py                # Configuration settings
+│   ├── features.py              # Shared feature engineering logic
 │   ├── models.py                # ML ModelManager & score utilities
 │   ├── tests.py                 # Pytest test suite
 │   └── utils.py                 # Input validation & KPI utilities
-├── 📊 data/                      # Historical CSV datasets
+├── 📊 data/                      # Historical and production datasets
+│   ├── raw/                     # Ingestion drop directory for new solar CSVs
 │   ├── dim_date.csv
 │   ├── dim_weather_codes.csv
 │   ├── fact_solar_daily.csv
 │   ├── fact_solar_hourly.csv
 │   ├── fact_weather_daily.csv
-│   └── fact_weather_hourly.csv
+│   ├── fact_weather_hourly.csv
+│   └── etl_status.json          # Last ETL execution summary & health status
 ├── 🖼️ images/                    # Dashboard screenshots for documentation
 │   ├── 1.png
 │   ├── 2.png
@@ -87,7 +97,8 @@ Solar-Energy-Generation-Weather-Analytics/
 │   ├── 01_EDA.ipynb
 │   └── 02_Modelling.ipynb
 ├── 🗄️ sql/                        # Database schema definition
-│   └── create_table.sql
+│   ├── create_table.sql         # Core prediction logs table
+│   └── create_etl_tables.sql    # Dimensional & fact tables DDL
 ├── 🎨 templates/                 # Frontend Jinja2 HTML templates
 │   ├── dashboard.html
 │   └── index.html
@@ -195,6 +206,77 @@ The coverage report shows:
 - Missing lines highlighted for quick identification
 
 For complete details on improvements, see [IMPROVEMENTS.md](IMPROVEMENTS.md)
+
+## 🔄 Data Pipeline (ETL & Automated Retraining)
+
+The project includes an end-to-end automated data engineering pipeline under [`etl/`](file:///Users/ompatel/Solar-Energy-Generation-Weather-Analytics/etl) that extracts meteorological data from the Open-Meteo API, ingests raw solar drops, engineers features, idempotently upserts to MySQL, and can conditionally retrain the ML model.
+
+```
+┌─────────────────────────┐     ┌────────────────────────┐
+│  Open-Meteo Weather API │     │  Raw Solar CSV Drops   │
+│  (Daily + Hourly Feeds) │     │     (data/raw/*.csv)   │
+└────────────┬────────────┘     └───────────┬────────────┘
+             │                              │
+             └──────────────┬───────────────┘
+                            ▼
+         ┌──────────────────────────────────────┐
+         │ 📥 Extract Phase (etl/extract.py)    │
+         │ - Retries with exponential backoff   │
+         │ - Configurable coordinates & dates   │
+         └──────────────────┬───────────────────┘
+                            ▼
+         ┌──────────────────────────────────────┐
+         │ ⚙️ Transform Phase (etl/transform.py) │
+         │ - Cleaning, deduping & bounds check  │
+         │ - Calendar dimension (dim_date)      │
+         │ - Shared features (src/features.py)  │
+         └──────────────────┬───────────────────┘
+                            ▼
+         ┌──────────────────────────────────────┐
+         │ 💾 Load Phase (etl/load.py)          │
+         │ - Idempotent MySQL upserts           │
+         │ - Refreshes CSVs in data/            │
+         │ - Logs run into MySQL & etl_status   │
+         └──────────────────┬───────────────────┘
+                            ▼
+         ┌──────────────────────────────────────┐
+         │ 🧠 Retrain Phase (etl/retrain.py)    │
+         │ - Chronological time-based split     │
+         │ - Compares candidate vs production   │
+         │ - Replaces only on proven metric win │
+         └──────────────────────────────────────┘
+```
+
+### 🔹 Pipeline Commands
+
+```bash
+# 1. Run standard extraction and ingestion (default date range)
+python -m etl.run_pipeline
+
+# 2. Run for specific date range and coordinates
+python -m etl.run_pipeline --start 2026-02-01 --end 2026-05-02 --lat 28.6139 --lon 77.2090
+
+# 3. Full refresh & recreate MySQL tables DDL
+python -m etl.run_pipeline --full-refresh
+
+# 4. Ingest and trigger automated model evaluation & retraining
+python -m etl.run_pipeline --retrain
+```
+
+### 🔹 Docker Compose ETL Service
+```bash
+# Run one-off ETL pipeline inside Docker
+docker compose run --rm etl
+
+# Run ETL with model retraining inside Docker
+docker compose run --rm etl python -m etl.run_pipeline --retrain
+```
+
+### 🔹 Monitoring & Health Check
+Every successful ETL run records execution metadata (`run_id`, `duration_seconds`, `records_processed`, `retrain_summary`) directly into `data/etl_status.json` and the MySQL `etl_runs` table, which is automatically surfaced via `GET /health`:
+```bash
+curl http://localhost:8000/health
+```
 
 ## 📦 Installation
 
