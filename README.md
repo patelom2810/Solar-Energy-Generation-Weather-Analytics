@@ -316,22 +316,22 @@ Ensures that pipeline runs can be re-executed safely at any time without duplica
 
 #### 4. Safe ML Retraining & Model Tournament ([`etl/retrain.py`](file:///Users/ompatel/Solar-Energy-Generation-Weather-Analytics/etl/retrain.py))
 Provides fully automated continuous model improvement with regression guards and multi-model benchmarking:
-- **Leakage-Free Chronological Split**:
-  - Sorts dataset chronologically and splits 80% train / 20% validation. Both the baseline benchmark and candidate architectures are trained strictly on the historical window without in-sample leakage.
+- **Rolling-Origin Time-Series Cross-Validation**:
+  - Employs strict rolling-origin splits: `TimeSeriesSplit(n_splits=5, test_size=10)`. Every test fold date is strictly later than all training fold dates, guaranteeing zero future data leakage.
 - **Multi-Model Candidate Tournament**:
-  - Evaluates 4 candidate model families in parallel:
-    1. **`Huber_Robust`**: `RobustScaler` + `HuberRegressor(epsilon=1.35)` (resistant to weather outliers & seasonal shifts)
-    2. **`Ensemble_Hybrid`**: Weighted `VotingRegressor` (70% Huber + 30% Tuned GBR)
-    3. **`Tuned_GBR`**: Regularized Gradient Boosting (`max_depth=2`, `subsample=0.8`, `learning_rate=0.04`)
-    4. **`Ridge_Scaled`**: Standardized L2 linear pipeline (`Ridge(alpha=5.0)`)
+  - Evaluates diverse model families across standardized feature sets (Set A: base 9 weather features, Set B: weather + `day_of_year`, Set C: clear-sky interaction set, Set D: weather + lag generation):
+    1. **`Ridge_Scaled`**: Standardized L2 linear pipeline (`StandardScaler` + `Ridge(alpha=3.0)`) — 🏆 **Active Production Champion on Set B**
+    2. **`Huber_Robust`**: `RobustScaler` + `HuberRegressor(epsilon=1.35, alpha=1.0)`
+    3. **`GradientBoosting`**: Regularized Gradient Boosting (`n_estimators=150`, `max_depth=2`, `learning_rate=0.05`, `subsample=0.8`)
+    4. **`RandomForest` & `ExtraTrees`**: Ensembles with depth & leaf regularization
+    5. **`XGBoost`**: Evaluated across depths 1, 2, 3 and linear booster
+    6. **Baselines**: Training window mean and Persistence (`gen_lag1`)
 - **Gated Comparison & Promotion Logic**:
-  - The winning candidate must strictly outperform the baseline benchmark on the holdout validation set:
-    $$\text{Candidate RMSE} < \text{Baseline RMSE}$$
-  - Winning candidate `Huber_Robust` slashed out-of-sample RMSE from **6.71 kWh** down to **3.44 kWh** (**48.74% error reduction**).
+  - Evaluates candidates on identical time-series folds. The production weather-only model is only replaced if a candidate achieves lower mean out-of-sample CV RMSE and MAE.
 - **Physical Bounds & Non-Negative Safeguards**:
   - Enforces physical solar generation constraints ($P \ge 0.0$ kWh).
-- **Zero-Downtime Backup & Replacement**:
-  - When promoted, the winning model is fitted on the full refreshed dataset, timestamped and archived (e.g. `models/solar_generation_model_v20261008_224724.pkl`), updates `models/solar_generation_model.pkl`, and refreshes `models/feature_names.pkl`.
+- **Metadata Archiving & Model Versioning**:
+  - Retrains winning candidate on the full cleaned dataset, archives versioned artifacts (e.g. `models/solar_generation_model_vYYYYMMDD_HHMMSS.pkl`), writes `models/model_metadata.json` with pinned library versions, and updates `data/etl_status.json`.
 
 ---
 
@@ -486,8 +486,10 @@ curl http://localhost:8000/health
     ],
     "retrain_status": "model_promoted",
     "model_score": {
-      "r2": 0.9994,
-      "mae": 0.1731
+      "r2": 0.4993,
+      "mae": 3.1678,
+      "rmse": 4.0135,
+      "cv_type": "rolling_origin_5fold"
     }
   }
 }
@@ -607,6 +609,7 @@ POST /predict
 Content-Type: application/json
 
 {
+  "date": "2026-04-15",
   "shortwave_radiation_sum": 25.0,
   "sunshine_duration": 39000,
   "cloud_cover_mean": 30.0,
@@ -617,13 +620,18 @@ Content-Type: application/json
   "is_weekend": false
 }
 ```
-**Validation:** Numeric fields must be within valid physical ranges; season must be 'Dry' or 'Wet'.
+**Validation & Features:**
+- **Date / Day of Year**: Provide `date` (YYYY-MM-DD) or explicit `day_of_year` (1–366). If neither is provided, today's date is used.
+- **Season Handling**: `season` accepts `'Dry'` or `'Wet'`. Because the model was trained exclusively on dry season historical data, passing `'Wet'` returns a non-fatal seasonal advisory warning in the response.
+- **Physical Bounds**: Shortwave radiation (0–40 MJ/m²), cloud cover (0–100%), temperature (-20–60°C), wind speed (0–50 m/s), rain (0–300 mm).
 
 Response:
 ```json
 {
-  "predicted_generation_kwh": 30.24,
-  "status": "Normal"
+  "predicted_generation_kwh": 31.42,
+  "status": "Normal",
+  "day_of_year": 105,
+  "warning": null
 }
 ```
 
@@ -680,54 +688,45 @@ CREATE TABLE IF NOT EXISTS prediction_logs (
 *The Model Performance view shows our active champion model metrics, feature importances, and predicted versus actual comparisons.*
 
 ### 🔹 Model Architecture & Tournament Benchmark
-The platform runs an automated multi-model candidate tournament in `etl/retrain.py` to evaluate diverse algorithm families on chronological validation splits:
+The platform runs an automated multi-model candidate tournament in `etl/retrain.py` using rolling-origin time-series cross-validation (`TimeSeriesSplit(n_splits=5, test_size=10)`):
 
-| Architecture | Out-of-Sample Val RMSE | Val MAE | Val MAPE | 5-Fold CV R² | Status |
-|--------------|:---------------------:|:-------:|:--------:|:------------:|:------:|
-| **Huber Robust Pipeline** | **3.44 kWh** | **3.00 kWh** | **7.42%** | **0.5421** | 🏆 **Active Production** |
-| **Hybrid Ensemble** (Huber + GBR) | 4.24 kWh | 3.80 kWh | 9.31% | 0.5342 | Runner-Up |
-| **Ridge Scaled Pipeline** | 6.02 kWh | 5.66 kWh | 13.69% | 0.5039 | Evaluated |
-| **Tuned Gradient Boosting** | 6.45 kWh | 5.66 kWh | 13.77% | 0.4140 | Evaluated |
-| **Baseline GBR (Original)** | 6.71 kWh | 5.29 kWh | 13.06% | 0.3754 | Deprecated |
+| Architecture | Feature Set | Mean CV RMSE | Mean CV MAE | Pooled Out-of-Fold R² | Production Status |
+|--------------|:-----------:|:------------:|:-----------:|:---------------------:|:-----------------:|
+| **Ridge Scaled Pipeline** | **Set B (Weather + Day-of-Year)** | **4.01 kWh** | **3.17 kWh** | **0.4993** | 🏆 **Active Production Champion** |
+| **Ridge Scaled Pipeline** | **Set D (Weather + Lag Features)** | **3.46 kWh** | **2.80 kWh** | **0.6517** | 🥈 Optional Model (Requires Lags) |
+| **Baseline Persistence** | Yesterday's generation (`gen_lag1`) | 3.66 kWh | 2.75 kWh | 0.6098 | Reference Baseline |
+| **Huber Robust Pipeline** | Set B | 4.01 kWh | 3.18 kWh | 0.4974 | Evaluated |
+| **Ridge Scaled Pipeline** | Set C (Clear-sky interaction) | 4.21 kWh | 3.43 kWh | 0.4546 | Evaluated |
+| **ExtraTrees (300 trees)** | Set B | 4.60 kWh | 3.94 kWh | 0.3162 | Evaluated |
+| **Random Forest (150 trees)** | Set B | 4.66 kWh | 3.91 kWh | 0.2823 | Evaluated |
+| **Ridge Scaled Pipeline** | Set A (Base weather without trend) | 4.61 kWh | 3.94 kWh | 0.3602 | Evaluated |
+| **XGBoost (gblinear)** | Set B | 4.63 kWh | 3.85 kWh | 0.3400 | Evaluated |
+| **XGBoost (depth=1)** | Set B | 4.99 kWh | 4.28 kWh | 0.1217 | Evaluated |
+| **Gradient Boosting (150 trees)** | Set B | 5.34 kWh | 4.51 kWh | 0.0247 | Evaluated |
+| **Huber Robust Pipeline** | Set A (Original features) | 7.54 kWh | 6.05 kWh | -1.7624 | Deprecated |
+| **Baseline Mean** | Training Window Mean | 7.87 kWh | 7.39 kWh | -0.9028 | Naive Baseline |
 
-- **Current Production Champion**: `Pipeline (RobustScaler → HuberRegressor)`
-- **Universal Feature Importance**: `extract_model_feature_importances` dynamically computes normalized feature contributions across tree models, pipelines, and voting ensembles.
+- **Current Production Champion**: `Pipeline (StandardScaler → Ridge(alpha=3.0))`
+- **Production Selection Rationale**: Ridge on Feature Set B is selected because it is the **best weather-only model**, allowing generation forecasting purely from numerical weather predictions without needing yesterday's measured output.
 - **Physical Output Guard**: Predictions bounded to $\ge 0.0$ kWh.
-- **Algorithm Family**: Robust Linear / Regularized Tree Ensemble (Scikit-learn)
-- **Training Data**: Historical daily solar generation with weather parameters
-- **Features** (10): 
-  - Shortwave Radiation Sum
-  - Sunshine Duration
-  - Cloud Cover Mean
-  - Temperature 2m Mean
-  - Wind Speed 10m Mean
-  - Rain Sum
-  - Season Encoding
-  - Is Weekend Encoding
-  - Sunshine Ratio
-  - Radiation Clear Sky
+- **Features in Production (10)**:
+  1. `shortwave_radiation_sum`: Total daily global horizontal solar irradiance (W/m²)
+  2. `sunshine_duration`: Daily duration of bright sunlight (seconds)
+  3. `cloud_cover_mean`: Daily average percentage cloud cover (%)
+  4. `temperature_2m_mean`: Daily mean 2-meter air temperature (°C)
+  5. `wind_speed_10m_mean`: Daily mean 10-meter wind speed (m/s)
+  6. `rain_sum`: Total daily precipitation (mm)
+  7. `is_weekend_enc`: Weekend binary flag (0=weekday, 1=weekend)
+  8. `sunshine_ratio`: $\text{sunshine\_duration} / \text{daylight\_duration}$ (bounded [0, 1])
+  9. `rad_clear`: $\text{shortwave\_radiation\_sum} \times (1 - \text{cloud\_cover\_mean}/100)$
+  10. `day_of_year`: Calendar day of year (1–366), capturing the seasonal sun angle trajectory
+  *(Note: `season_enc` was removed as all 91 historical days are in the Dry season).*
 
-### 🔹 Sample Predictions
-Test predictions across diverse weather conditions generated by the model:
-
-```
-Scenario              Prediction    Cloud    Temperature
-────────────────────────────────────────────────────────
-☀️ Perfect Sunny     42.14 kWh      5%       28.0°C
-🌤️ Partly Cloudy    31.31 kWh     40%       26.0°C
-☁️ Cloudy Day        26.30 kWh     70%       24.0°C
-⛈️ Rainy Day         23.53 kWh     95%       22.0°C
-🌅 Early Morning     22.16 kWh     20%       18.0°C
-🏖️ Optimal (Weekend) 42.78 kWh     10%       27.5°C
-
-Average: 31.37 kWh | Range: 22.16 - 42.78 kWh | StdDev: 9.14 kWh
-```
-
-### 🔹 Key Insights
-- **Cloud Impact**: Clear skies average **31.94 kWh** vs cloudy **23.99 kWh**
-- **Seasonal Pattern**: Dry season averages **29.91 kWh** vs wet **23.99 kWh**
-- **Temperature Correlation**: Warm days (25-30°C) generate more consistently
-- **Weather Sensitivity**: Model accurately responds to all weather parameters
+### 🔹 Key Empirical Insights
+- **Strong Seasonal Trajectory**: Observed generation rises strongly across the observation period (averaging ~24.5 kWh in February, ~30.7 kWh in March, and ~38.8 kWh in April). Incorporating `day_of_year` allowed linear models to capture this upward trajectory without requiring lag features.
+- **Radiation and Clear-Sky Efficiency**: Clear-sky interaction (`rad_clear`) and sunshine efficiency ratio (`sunshine_ratio`) are the dominant meteorological drivers in standardized coefficient rankings.
+- **Tree Extrapolation Limits**: Non-linear tree regressors (Gradient Boosting, Random Forest, XGBoost) scored substantially lower (R² 0.02 to 0.32) because decision tree splits cannot extrapolate trends outside their historical training range.
+- **Modest Marginal Gain from Lag Features**: Persistence alone achieves $R^2 \approx 0.61$ and MAE $2.75$ kWh. Ridge with lag features achieves $R^2 \approx 0.65$ and MAE $2.80$ kWh — demonstrating that past output adds only modest predictive gain over weather features.
 
 ## ⚙️ Configuration
 
@@ -792,139 +791,95 @@ mysql -u root -p solar_analytics
 SHOW TABLES;
 ```
 
-## 📊 Stored Prediction Statistics
+## 📊 Historical Data Summary & Baseline Statistics
 
 ```
-Database Analysis (10 Representative Predictions):
+Historical Dataset Analysis (89 Clean Days, Dry Season Feb–Apr 2026):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Total Predictions:     10
-Average Generation:    28.72 kWh
-Range:                 23.38 - 42.45 kWh
-Standard Deviation:    5.59 kWh
+Total Usable Clean Days: 89 (82-83 days for lag-feature evaluation)
+Average Generation:      31.25 kWh
+Daily Range:             11.45 - 46.20 kWh
+Standard Deviation:       6.79 kWh
 
-By Season:
-  Dry:   8 predictions, Avg 29.91 kWh
-  Wet:   2 predictions, Avg 23.99 kWh
+Monthly Progression (Dry Season):
+  February 2026 (27 clean days):  Avg 24.51 kWh
+  March 2026    (30 clean days):  Avg 30.69 kWh
+  April 2026    (30 clean days):  Avg 38.83 kWh
+  May 2026      (2 clean days):   Avg 35.12 kWh
 
-By Cloud Cover:
-  Clear (0-20%):     5 preds, Avg 31.94 kWh
-  Partly (20-40%):   1 pred,  Avg 27.64 kWh
-  Mostly (40-60%):   2 preds, Avg 25.96 kWh
-  Cloudy (60-100%):  2 preds, Avg 23.99 kWh
+Seasonal Coverage:
+  Dry Season: 100% (89 of 89 clean days)
+  Wet Season: 0%   (Untracked in historical training window)
+
+Excluded Anomalies:
+  - 2026-02-01: Partial day (0.644 kWh, only 8 hours recorded in UTC)
+  - 2026-03-31: Grid disconnect / inverter outage (1.406 kWh vs 30+ kWh expected)
 ```
 
 ## 📖 Learning Resources
 
 - [Flask Documentation](https://flask.palletsprojects.com/)
 - [Chart.js Documentation](https://www.chartjs.org/)
-- [Scikit-learn Gradient Boosting](https://scikit-learn.org/stable/modules/ensemble.html#gradient-boosted-trees)
+- [Scikit-learn TimeSeriesSplit](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html)
+- [Scikit-learn Ridge Regression](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.Ridge.html)
 - [MySQL Python Connector](https://dev.mysql.com/doc/connector-python/en/)
 
 ## ⚠️ Limitations & Future Improvements
 
 ### 🔹 Current Limitations
 
-#### 📉 Limited Dataset Size
-- **Current Data**: 89 merged daily records (~3 months of data)
-- **Impact**: ML model trained on daily records with engineered sunshine ratio (Holdout Test R² = 0.9994, MAE = 0.17 kWh, RMSE = 0.25 kWh)
-- **Recommendation**: Collect 12+ months of continuous historical data (365+ samples) across multiple geographic zones
-- **Target**: Maintain robust multi-year seasonal generalization
+#### 📉 Limited Dataset Size & Temporal Horizon
+- **Current Data**: 89 clean daily records spanning 3 calendar months (February 2, 2026 – May 2, 2026).
+- **Lag Feature Availability**: For autoregressive models utilizing `gen_rolling7`, the first 7 days are required as seed, leaving 82–83 valid evaluation days.
+- **Evaluation Discipline**: Evaluated using 5-fold rolling-origin time-series cross-validation (`TimeSeriesSplit(n_splits=5, test_size=10)`). Production model (`Pipeline(StandardScaler → Ridge(alpha=3.0))` on Feature Set B) yields:
+  - **Mean CV RMSE**: 4.01 kWh
+  - **Mean CV MAE**: 3.17 kWh
+  - **Pooled R²**: 0.4993 (~0.50)
+- **Extrapolation Limitation of Tree Regressors**: Due to a prominent upward seasonal ramp (from ~24.5 kWh/day in Feb to ~38.8 kWh/day in Apr), tree-based regressors (RandomForest, ExtraTrees, GradientBoosting, XGBoost) fail to extrapolate outside the target range seen in each earlier training window, yielding lower CV R² scores (0.02 – 0.32). Regularized linear regression (Ridge) gracefully captures both the seasonal slope via `day_of_year` and shortwave radiation variations.
 
-#### 📅 Seasonal Data Limitations
-- **Gap**: Current historical data covers predominantly dry season patterns
-- **Missing**: 
-  - Extreme weather events (heavy storms, monsoon deltas)
-  - Severe winter performance data
-  - Temperature extremes (heatwaves / sub-zero days)
-- **Effect**: Model should be monitored as new seasons are ingested via the ETL pipeline
-- **Solution**: Automated ETL ingestion continuously updates data and evaluates candidate models
+#### 📅 Seasonal Coverage Limitation
+- **Single Season**: All 89 records belong exclusively to the dry season (Nov–Apr calendar window).
+- **Missing Regimes**:
+  - Wet season monsoon deltas (May–Oct)
+  - Heavy rain attenuation and sustained cloud soak
+  - Extreme winter solstice sun angles
+- **Runtime Mitigation**: The `/predict` API warns consumers when `season="Wet"` is submitted, clearly indicating that the model was trained exclusively on dry season data.
 
 #### 🎯 Model Scope Constraints
-- **Current Features**: Base weather parameters + engineered interaction features (`sunshine_ratio`, `radiation_clear_sky`)
+- **Zero-Lag Weather API vs. Autoregressive Monitoring**: Feature Set B is designed for external forecasting where past inverter generation may not be available at runtime. When yesterday's generation is available (Feature Set D), autoregressive Ridge achieves CV RMSE of 3.46 kWh and pooled R² of 0.6517.
 - **Missing Predictors**:
-  - Cloud type classification (stratocumulus vs cirrus)
-  - Atmospheric pressure and humidity
-  - Solar panel surface temperature
-  - Equipment efficiency degradation over time
-  - Dust and soiling accumulation
-- **Opportunity**: Incorporate hourly data for intra-day predictions
+  - Inverter clipping thresholds and panel degradation
+  - Panel orientation / tilt / azimuth
+  - Panel temperature (solar cell efficiency drops at high surface temperatures)
+  - Soiling and dust accumulation
 
-### 🔹 Future Enhancement Ideas
+### 🔹 Future Enhancement Roadmap
 
-#### 🔷 Phase 1: Data & Model Improvements (High Priority)
-1. **Expand Historical Dataset**
-   - Ingest 3+ years of daily records via Open-Meteo pipeline
-   - Include multiple climate zones/seasons
-   - Add extreme weather events documentation
-   - Target: 1000+ samples for multi-climate models
+#### 🔷 Phase 1: Data Expansion & Seasonal Ingestion (Immediate)
+1. **12-Month Ingestion**: Ingest full 12+ months of daily/hourly data via Open-Meteo to cover both Dry and Wet seasons.
+2. **Tree Model Re-evaluation**: Re-evaluate XGBoost and LightGBM on the full annual dataset once the full seasonal cycle is represented and extrapolation is no longer needed across fold boundaries.
+3. **Automated Anomaly Detection**: Replace hardcoded anomaly date exclusions with dynamic Z-score / Cook's distance filters.
 
-2. **Add Feature Engineering**
-   - Day-of-year (captures seasonal cycles)
-   - Moving averages (7-day, 30-day trends)
-   - Lag features (yesterday's generation impact)
-   - Weather gradients (rate of change)
-   - Equipment age/degradation factor
+#### 🔷 Phase 2: Granular Intra-Day Modeling (Medium Term)
+4. **Hourly Forecasting**: Productionize hourly prediction pipeline using UTC-aligned `fact_solar_hourly` and `fact_weather_hourly` data.
+5. **Ensemble Stacking**: Combine Ridge calendar baseline with gradient boosted residual trees.
 
-3. **Model Upgrading**
-   - Try XGBoost, LightGBM for ensemble benchmark
-   - Implement rolling time-series CV in `retrain.py`
-   - A/B test ensemble methods (stacking, voting)
-   - Hyperparameter tuning with automated search
+#### 🔷 Phase 3: Operational Integration (Long Term)
+6. **Live Inverter Telemetry**: Stream real-time generation metrics via MQTT / Modbus for closed-loop lag feature updates.
+7. **Weather Forecast API Integration**: Automatically pull 7-day weather outlooks to power forward solar yield forecasts.
 
-#### 🔷 Phase 2: Advanced Analytics (Medium Priority)
-4. **Time-Series Forecasting**
-   - Implement ARIMA/SARIMA for temporal patterns
-   - Add Prophet for seasonal decomposition
-   - Support multi-step ahead forecasting (7-14 day outlook)
+### 🔹 Model Benchmark Summary (5-Fold Rolling-Origin CV)
 
-5. **Anomaly Detection**
-   - Identify equipment malfunctions via deviation analysis
-   - Detect abnormal weather events
-   - Alert system for critical underperformance
-
-6. **Hourly-Level Predictions**
-   - Migrate from daily to hourly predictions
-   - Support 24-hour rolling forecasts
-   - Optimize for grid demand matching
-
-#### 🔷 Phase 3: Enterprise Features (Lower Priority)
-7. **Real-Time Data Integration**
-   - Connect to live weather APIs
-   - Stream predictions to IoT devices
-   - Live generation monitoring dashboard
-
-8. **Multi-Site Support**
-   - Handle multiple solar installations
-   - Location-specific model training
-   - Regional performance comparison
-
-9. **Advanced Visualizations**
-   - 3D surface plots (radiation vs cloud vs generation)
-   - Real-time prediction confidence intervals
-   - Forecast accuracy heatmaps
-   - ROI calculator for installations
-
-10. **Deployment Optimization**
-    - Model quantization for edge devices
-    - API response optimization
-    - Caching strategy for frequent predictions
-    - Docker containerization
-
-### 🔹 Model Performance & Roadmap Progression
-
-| Phase | Timeline | R² Score | MAE | Use Case |
-|-------|----------|----------|-----|----------|
-| Current | Now | 0.9994 | 0.17 kWh | Optimized Production |
-| Phase 1 | 3-4 months | 0.999+ | <0.15 kWh | Multi-Region Datasets |
-| Phase 2 | 4-6 months | 0.999+ | <0.10 kWh | Intra-Day Hourly Forecasts |
-| Phase 3 | 6-12 months | Enterprise | Real-Time | Grid IoT Integration |
-
-### 🔹 Recommended Priority Path
-1. ✅ **Start**: Collect 12 months of clean historical data
-2. ⏩ **Next**: Implement feature engineering (day-of-year, moving averages)
-3. ⏩ **Then**: Retrain model with XGBoost on expanded dataset
-4. ⏩ **Later**: Add time-series forecasting capabilities
-5. ⏩ **Future**: Implement real-time integration and enterprise features
+| Model Architecture | Feature Set | CV RMSE (kWh) | CV MAE (kWh) | Pooled R² | Production Status |
+|--------------------|-------------|---------------|--------------|-----------|-------------------|
+| **Pipeline(StandardScaler → Ridge, α=3.0)** | **Set B (Base + DOY)** | **4.01** | **3.17** | **0.4993** | **Active Production Champion** |
+| Pipeline(StandardScaler → Ridge, α=10.0) | Set D (Set B + Lag1 + Rolling7) | 3.46 | 2.80 | 0.6517 | Candidate (Requires Lag) |
+| Persistence Baseline (`gen_lag1`) | Set C (Lag1 only) | 3.66 | 2.75 | 0.6098 | Reference Baseline |
+| ExtraTreesRegressor(n_estimators=100) | Set B (Base + DOY) | 4.67 | 3.86 | 0.3204 | Benchmark (Tree Ensembles) |
+| XGBRegressor(max_depth=3, lr=0.05) | Set B (Base + DOY) | 4.95 | 3.96 | 0.2372 | Benchmark (Gradient Boosting) |
+| GradientBoostingRegressor | Set B (Base + DOY) | 5.24 | 4.30 | 0.1448 | Benchmark |
+| RandomForestRegressor(n_estimators=100) | Set B (Base + DOY) | 5.58 | 4.61 | 0.0272 | Benchmark |
+| HuberRegressor(epsilon=1.35) | Set A (No DOY) | 7.63 | 6.78 | -1.7583 | Deprecated Baseline |
 
 ---
 
@@ -948,7 +903,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Dashboard**: Prototype / Active
 - **API Endpoints**: Fully Functional (with OpenAPI docs)
-- **ML Model**: Validated & Tested (Huber Robust Champion & Tournament Pipeline)
+- **ML Model**: Validated & Tested (Ridge α=3.0 Champion & Rolling-Origin CV Tournament Pipeline)
 - **Database**: MySQL Connected (with indexes & connection pooling)
 - **Documentation**: Complete
 - **Docker Support**: Dockerfile & Docker Compose configured

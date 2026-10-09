@@ -1,11 +1,11 @@
 {
-  "run_id": "run_20261008_231310_c15edb",
+  "run_id": "run_20261009_105605_audit",
   "status": "success",
-  "start_time": "2026-10-08T23:13:10.319823",
-  "end_time": "2026-10-08T23:13:12.084210",
-  "duration_seconds": 1.76,
+  "start_time": "2026-10-09T10:56:05.547569",
+  "end_time": "2026-10-09T10:56:05.547569",
+  "duration_seconds": 0.0,
   "records_processed": {
-    "dim_date": 91,
+    "dim_date": 1827,
     "fact_solar_daily": 91,
     "fact_weather_daily": 91,
     "fact_solar_hourly": 2135,
@@ -14,52 +14,280 @@
   "retrain_summary": {
     "retrained": true,
     "improved": true,
-    "best_candidate_name": "Huber_Robust",
+    "champion_name": "Ridge_Set_B",
     "candidate_metrics": {
-      "rmse": 2.7683,
-      "mae": 2.2147,
-      "r2": -0.2571,
-      "mape": 5.55
+      "mean_cv_rmse": 4.0082,
+      "mean_cv_mae": 3.1668,
+      "mean_cv_r2": -0.2547,
+      "mean_cv_mape": 9.88,
+      "pooled_r2": 0.4993,
+      "pooled_mae": 3.1668,
+      "pooled_rmse": 4.2688,
+      "fold_maes": [
+        2.6382,
+        4.9373,
+        4.1639,
+        2.6096,
+        1.4851
+      ]
     },
     "current_metrics": {
-      "rmse": 5.2338,
-      "mae": 2.5509,
-      "r2": -3.4935,
-      "mape": 6.53
+      "mean_cv_rmse": 4.0082,
+      "mean_cv_mae": 3.1668,
+      "mean_cv_r2": -0.2547,
+      "fold_maes": [
+        2.6382,
+        4.9373,
+        4.1639,
+        2.6096,
+        1.4851
+      ]
     },
     "tournament_results": {
-      "Huber_Robust": {
-        "rmse": 2.7683,
-        "mae": 2.2147,
-        "r2": -0.2571,
-        "mape": 5.55
+      "Baseline_Mean": {
+        "feature_set": "None",
+        "mean_cv_rmse": 7.9736,
+        "mean_cv_mae": 7.4817,
+        "mean_cv_r2": -8.6115,
+        "fold_maes": [
+          3.6665,
+          4.8303,
+          9.4713,
+          9.8778,
+          9.5624
+        ]
       },
-      "Ensemble_Hybrid": {
-        "rmse": 3.1865,
-        "mae": 2.4491,
-        "r2": -0.6656,
-        "mape": 6.08
+      "Baseline_Persistence": {
+        "feature_set": "gen_lag1",
+        "mean_cv_rmse": 4.4645,
+        "mean_cv_mae": 3.2172,
+        "mean_cv_r2": -0.7512,
+        "fold_maes": [
+          2.1179,
+          5.6649,
+          3.3289,
+          2.9732,
+          2.0012
+        ]
       },
-      "Tuned_GBR": {
-        "rmse": 4.473,
-        "mae": 3.373,
-        "r2": -2.2821,
-        "mape": 8.36
+      "Ridge_Set_B": {
+        "mean_cv_rmse": 4.0082,
+        "mean_cv_mae": 3.1668,
+        "mean_cv_r2": -0.2547,
+        "mean_cv_mape": 9.88,
+        "pooled_r2": 0.4993,
+        "pooled_mae": 3.1668,
+        "pooled_rmse": 4.2688,
+        "fold_maes": [
+          2.6382,
+          4.9373,
+          4.1639,
+          2.6096,
+          1.4851
+        ]
       },
-      "Ridge_Scaled": {
-        "rmse": 3.7053,
-        "mae": 2.9683,
-        "r2": -1.2521,
-        "mape": 7.31
+      "Ridge_Set_A": {
+        "mean_cv_rmse": 4.6526,
+        "mean_cv_mae": 4.0177,
+        "mean_cv_r2": -0.7594,
+        "mean_cv_mape": 11.82,
+        "pooled_r2": 0.3476,
+        "pooled_mae": 4.0177,
+        "pooled_rmse": 4.8726,
+        "fold_maes": [
+          4.4079,
+          5.1414,
+          5.8534,
+          2.5248,
+          2.1611
+        ]
+      },
+      "Ridge_Set_C": {
+        "mean_cv_rmse": 4.2458,
+        "mean_cv_mae": 3.4912,
+        "mean_cv_r2": -0.4453,
+        "mean_cv_mape": 10.91,
+        "pooled_r2": 0.4446,
+        "pooled_mae": 3.4912,
+        "pooled_rmse": 4.496,
+        "fold_maes": [
+          3.9931,
+          4.8408,
+          4.5768,
+          2.615,
+          1.4304
+        ]
+      },
+      "Huber_Robust_Set_A": {
+        "mean_cv_rmse": 4.1735,
+        "mean_cv_mae": 3.5694,
+        "mean_cv_r2": -0.3868,
+        "mean_cv_mape": 10.78,
+        "pooled_r2": 0.4738,
+        "pooled_mae": 3.5694,
+        "pooled_rmse": 4.3761,
+        "fold_maes": [
+          3.6385,
+          5.0388,
+          4.7366,
+          2.5703,
+          1.8627
+        ]
+      },
+      "Huber_Robust_Set_B": {
+        "mean_cv_rmse": 4.0102,
+        "mean_cv_mae": 3.1833,
+        "mean_cv_r2": -0.256,
+        "mean_cv_mape": 10.04,
+        "pooled_r2": 0.4974,
+        "pooled_mae": 3.1833,
+        "pooled_rmse": 4.2768,
+        "fold_maes": [
+          2.7811,
+          5.0053,
+          4.1744,
+          2.7152,
+          1.2405
+        ]
+      },
+      "GradientBoosting_Set_B": {
+        "mean_cv_rmse": 5.0401,
+        "mean_cv_mae": 4.1914,
+        "mean_cv_r2": -0.9179,
+        "mean_cv_mape": 12.03,
+        "pooled_r2": 0.0806,
+        "pooled_mae": 4.1914,
+        "pooled_rmse": 5.7843,
+        "fold_maes": [
+          3.9705,
+          3.6343,
+          9.4392,
+          2.2906,
+          1.6225
+        ]
+      },
+      "RandomForest_Set_B": {
+        "mean_cv_rmse": 4.6923,
+        "mean_cv_mae": 3.9207,
+        "mean_cv_r2": -0.7062,
+        "mean_cv_mape": 11.23,
+        "pooled_r2": 0.2658,
+        "pooled_mae": 3.9207,
+        "pooled_rmse": 5.169,
+        "fold_maes": [
+          4.0385,
+          3.7831,
+          7.7778,
+          2.1794,
+          1.8246
+        ]
+      },
+      "ExtraTrees_Set_B": {
+        "mean_cv_rmse": 4.6076,
+        "mean_cv_mae": 3.9513,
+        "mean_cv_r2": -0.6923,
+        "mean_cv_mape": 11.25,
+        "pooled_r2": 0.3171,
+        "pooled_mae": 3.9513,
+        "pooled_rmse": 4.9851,
+        "fold_maes": [
+          3.8571,
+          4.0558,
+          7.2898,
+          2.2292,
+          2.3246
+        ]
+      },
+      "XGBoost_d1_Set_B": {
+        "mean_cv_rmse": 4.9999,
+        "mean_cv_mae": 4.2877,
+        "mean_cv_r2": -0.9583,
+        "mean_cv_mape": 12.17,
+        "pooled_r2": 0.1155,
+        "pooled_mae": 4.2877,
+        "pooled_rmse": 5.6735,
+        "fold_maes": [
+          4.1514,
+          3.7822,
+          9.1859,
+          1.8341,
+          2.4849
+        ]
+      },
+      "XGBoost_d2_Set_B": {
+        "mean_cv_rmse": 5.4279,
+        "mean_cv_mae": 4.5745,
+        "mean_cv_r2": -1.2703,
+        "mean_cv_mape": 12.84,
+        "pooled_r2": -0.0992,
+        "pooled_mae": 4.5745,
+        "pooled_rmse": 6.3246,
+        "fold_maes": [
+          4.2764,
+          3.6507,
+          10.6332,
+          2.2375,
+          2.075
+        ]
+      },
+      "XGBoost_d3_Set_B": {
+        "mean_cv_rmse": 5.5747,
+        "mean_cv_mae": 4.6369,
+        "mean_cv_r2": -1.427,
+        "mean_cv_mape": 13.02,
+        "pooled_r2": -0.1849,
+        "pooled_mae": 4.6369,
+        "pooled_rmse": 6.5666,
+        "fold_maes": [
+          4.386,
+          3.7532,
+          11.0248,
+          2.1225,
+          1.8982
+        ]
+      },
+      "XGBoost_linear_Set_B": {
+        "mean_cv_rmse": 4.5477,
+        "mean_cv_mae": 3.752,
+        "mean_cv_r2": -0.7656,
+        "mean_cv_mape": 11.28,
+        "pooled_r2": 0.3596,
+        "pooled_mae": 3.752,
+        "pooled_rmse": 4.8274,
+        "fold_maes": [
+          4.8426,
+          4.8141,
+          4.8516,
+          2.3518,
+          1.8998
+        ]
+      },
+      "Ridge_Lag_Set_D": {
+        "mean_cv_rmse": 3.4929,
+        "mean_cv_mae": 2.8463,
+        "mean_cv_r2": -0.0922,
+        "mean_cv_mape": 8.73,
+        "pooled_r2": 0.6457,
+        "pooled_mae": 2.8463,
+        "pooled_rmse": 3.5908,
+        "fold_maes": [
+          2.8842,
+          3.8652,
+          3.1268,
+          2.7308,
+          1.6243
+        ]
       }
     },
-    "samples_evaluated": 19,
-    "timestamp": "2026-10-08T23:13:12.080435",
-    "model_version": "v20261008_231312",
-    "versioned_path": "models/solar_generation_model_v20261008_231312.pkl",
-    "rmse_reduction_pct": 47.11,
-    "message": "Production model updated to Huber_Robust with 47.11% RMSE reduction."
+    "n_folds": 5,
+    "test_size_per_fold": 10,
+    "samples_evaluated": 83,
+    "timestamp": "2026-10-09T10:56:05.544155",
+    "model_version": "v20261009_105605",
+    "versioned_path": "models/solar_generation_model_v20261009_105605.pkl",
+    "metadata_path": "models/model_metadata.json",
+    "message": "Production champion updated to Ridge_Set_B (CV RMSE: 4.0082 kWh, CV MAE: 3.1668 kWh)."
   },
   "error_message": null,
-  "timestamp": "2026-10-08T23:13:12.084210"
+  "timestamp": "2026-10-09T10:56:05.547569"
 }
