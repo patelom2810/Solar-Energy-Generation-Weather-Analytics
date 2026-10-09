@@ -51,12 +51,14 @@ def validate_prediction_input(data):
         except Exception:
             errors.append(f"Invalid date format: {data['date']}. Use YYYY-MM-DD.")
 
+    warnings = []
+
     # Validate season parameter (Dry vs Wet; Wet generates a warning because no training data exists for Wet season)
     season = data.get('season', 'Dry')
     if season not in ['Dry', 'Wet']:
         errors.append(f"season must be 'Dry' or 'Wet', got '{season}'")
     elif season == 'Wet':
-        warning = "Model was trained exclusively on dry-season observations (Feb–May). Wet-season predictions carry higher uncertainty."
+        warnings.append("Model was trained exclusively on dry-season observations (Feb–May). Wet-season predictions carry higher uncertainty.")
     
     # Validate is_weekend parameter
     is_weekend = data.get('is_weekend', False)
@@ -68,7 +70,7 @@ def validate_prediction_input(data):
     
     # Derive day_of_year
     day_of_year = None
-    if 'day_of_year' in data:
+    if 'day_of_year' in data and data['day_of_year'] is not None:
         try:
             day_of_year = int(data['day_of_year'])
         except (ValueError, TypeError):
@@ -76,12 +78,18 @@ def validate_prediction_input(data):
     elif parsed_date is not None:
         day_of_year = int(parsed_date.dayofyear)
 
+    # Check for extrapolation outside historical training window (Feb 1 – May 2, 2026: day 32 to 122)
+    if day_of_year is not None and (day_of_year < 32 or day_of_year > 122):
+        warnings.append("Date is outside historical training window (day_of_year below 32 or above 122); the day-of-year trend is extrapolated.")
+
+    warning_text = " ".join(warnings) if warnings else None
+
     validated_data = {
         'season': season,
         'is_weekend': valid_weekend,
         'date': str(data.get('date')) if 'date' in data else None,
         'day_of_year': day_of_year,
-        'warning': warning,
+        'warning': warning_text,
     }
     
     return len(errors) == 0, errors, validated_data

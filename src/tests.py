@@ -68,6 +68,40 @@ class TestInputValidation:
         assert validated['warning'] is not None
         assert 'dry-season' in validated['warning'].lower()
     
+    def test_extrapolated_day_of_year_warning(self):
+        """Test non-fatal warning when date/day_of_year is outside training window (< 32 or > 122)"""
+        # Day 15 (Jan 15) is below 32
+        data_early = {
+            'date': '2026-01-15',
+            'shortwave_radiation_sum': 20.0,
+            'season': 'Dry'
+        }
+        is_valid, errors, validated = validate_prediction_input(data_early)
+        assert is_valid
+        assert validated['warning'] is not None
+        assert 'extrapolated' in validated['warning'].lower()
+        
+        # Day 135 (May 15) is above 122
+        data_late = {
+            'date': '2026-05-15',
+            'shortwave_radiation_sum': 20.0,
+            'season': 'Dry'
+        }
+        is_valid, errors, validated = validate_prediction_input(data_late)
+        assert is_valid
+        assert validated['warning'] is not None
+        assert 'extrapolated' in validated['warning'].lower()
+
+        # Day 74 (Mar 15) is inside [32, 122]
+        data_inside = {
+            'date': '2026-03-15',
+            'shortwave_radiation_sum': 20.0,
+            'season': 'Dry'
+        }
+        is_valid, errors, validated = validate_prediction_input(data_inside)
+        assert is_valid
+        assert validated['warning'] is None
+    
     def test_invalid_numeric_bounds(self):
         """Test numeric values outside valid bounds"""
         data = {
@@ -406,6 +440,49 @@ class TestPredictionAPIEndpoint:
         assert 'predicted_generation_kwh' in data
         assert 'warning' in data
         assert 'dry-season' in data['warning'].lower()
+
+    def test_predict_endpoint_extrapolated_day_of_year_warning(self):
+        """Test /predict returns extrapolation warning when day_of_year < 32 or > 122"""
+        from src.app_main import app
+        client = app.test_client()
+        
+        # Date earlier than training window: 2026-01-10 (day 10 < 32)
+        payload_early = {
+            'date': '2026-01-10',
+            'shortwave_radiation_sum': 22.0,
+            'sunshine_duration': 32000,
+            'cloud_cover_mean': 25.0,
+            'temperature_2m_mean': 24.0,
+            'wind_speed_10m_mean': 15.0,
+            'rain_sum': 0.0,
+            'season': 'Dry',
+            'is_weekend': False
+        }
+        resp_early = client.post('/predict', json=payload_early)
+        assert resp_early.status_code == 200
+        data_early = resp_early.get_json()
+        assert data_early['day_of_year'] == 10
+        assert data_early['warning'] is not None
+        assert 'extrapolated' in data_early['warning'].lower()
+
+        # Date later than training window: 2026-06-01 (day 152 > 122) with Dry season
+        payload_late = {
+            'date': '2026-06-01',
+            'shortwave_radiation_sum': 28.0,
+            'sunshine_duration': 38000,
+            'cloud_cover_mean': 20.0,
+            'temperature_2m_mean': 29.0,
+            'wind_speed_10m_mean': 14.0,
+            'rain_sum': 0.0,
+            'season': 'Dry',
+            'is_weekend': False
+        }
+        resp_late = client.post('/predict', json=payload_late)
+        assert resp_late.status_code == 200
+        data_late = resp_late.get_json()
+        assert data_late['day_of_year'] == 152
+        assert data_late['warning'] is not None
+        assert 'extrapolated' in data_late['warning'].lower()
 
     def test_model_score_endpoint(self):
         from src.app_main import app

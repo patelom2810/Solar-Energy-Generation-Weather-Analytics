@@ -364,10 +364,15 @@ def predict():
         if not success:
             logger.warning(f"Failed to log prediction to database, but prediction was generated: {pred:.3f} kWh")
         
-        logger.info(f"Prediction generated: {pred:.3f} kWh for day_of_year={row['day_of_year']}, season={season}")
+        row_doy = int(row['day_of_year'])
+        if (row_doy < 32 or row_doy > 122) and (not warning_msg or "extrapolated" not in warning_msg):
+            extrap_warn = "Date is outside historical training window (day_of_year below 32 or above 122); the day-of-year trend is extrapolated."
+            warning_msg = f"{warning_msg} {extrap_warn}".strip() if warning_msg else extrap_warn
+
+        logger.info(f"Prediction generated: {pred:.3f} kWh for day_of_year={row_doy}, season={season}")
         response_payload = {
             'predicted_generation_kwh': round(pred, 3),
-            'day_of_year': int(row['day_of_year']),
+            'day_of_year': row_doy,
             'status': 'Low' if pred < 5 else 'Normal',
             'warning': warning_msg if warning_msg else None
         }

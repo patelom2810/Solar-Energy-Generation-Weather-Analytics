@@ -870,16 +870,28 @@ Excluded Anomalies:
 
 ### 🔹 Model Benchmark Summary (5-Fold Rolling-Origin CV)
 
-| Model Architecture | Feature Set | CV RMSE (kWh) | CV MAE (kWh) | Pooled R² | Production Status |
-|--------------------|-------------|---------------|--------------|-----------|-------------------|
-| **Pipeline(StandardScaler → Ridge, α=3.0)** | **Set B (Base + DOY)** | **4.01** | **3.17** | **0.4993** | **Active Production Champion** |
-| Pipeline(StandardScaler → Ridge, α=10.0) | Set D (Set B + Lag1 + Rolling7) | 3.46 | 2.80 | 0.6517 | Candidate (Requires Lag) |
-| Persistence Baseline (`gen_lag1`) | Set C (Lag1 only) | 3.66 | 2.75 | 0.6098 | Reference Baseline |
-| ExtraTreesRegressor(n_estimators=100) | Set B (Base + DOY) | 4.67 | 3.86 | 0.3204 | Benchmark (Tree Ensembles) |
-| XGBRegressor(max_depth=3, lr=0.05) | Set B (Base + DOY) | 4.95 | 3.96 | 0.2372 | Benchmark (Gradient Boosting) |
-| GradientBoostingRegressor | Set B (Base + DOY) | 5.24 | 4.30 | 0.1448 | Benchmark |
-| RandomForestRegressor(n_estimators=100) | Set B (Base + DOY) | 5.58 | 4.61 | 0.0272 | Benchmark |
-| HuberRegressor(epsilon=1.35) | Set A (No DOY) | 7.63 | 6.78 | -1.7583 | Deprecated Baseline |
+| Model Architecture | Feature Set | Rows Used | CV RMSE (kWh) | CV MAE (kWh) | Pooled R² | Production Status |
+|--------------------|-------------|-----------|---------------|--------------|-----------|-------------------|
+| **Pipeline(StandardScaler → Ridge, α=3.0)** | **Set B (Base + DOY)** | **82** | **4.01** | **3.17** | **0.4993** | **Active Production Champion** |
+| Pipeline(StandardScaler → Ridge, α=10.0) | Set D (Set B + Lag1 + Rolling7) | 82 | 3.46 | 2.80 | 0.6517 | Candidate (Requires Lag) |
+| Persistence Baseline (`gen_lag1`) | gen_lag1 | 82 | 3.66 | 2.75 | 0.6098 | Reference Baseline |
+| Baseline (Training Window Mean) | None | 82 | 7.87 | 7.39 | -0.9028 | Reference Baseline |
+| ExtraTreesRegressor(n_estimators=100) | Set B (Base + DOY) | 82 | 4.67 | 3.86 | 0.3204 | Benchmark (Tree Ensembles) |
+| XGBRegressor(max_depth=3, lr=0.05) | Set B (Base + DOY) | 82 | 4.95 | 3.96 | 0.2372 | Benchmark (Gradient Boosting) |
+| GradientBoostingRegressor | Set B (Base + DOY) | 82 | 5.24 | 4.30 | 0.1448 | Benchmark |
+| RandomForestRegressor(n_estimators=100) | Set B (Base + DOY) | 82 | 5.58 | 4.61 | 0.0272 | Benchmark |
+| HuberRegressor(epsilon=1.35) | Set A (No DOY) | 82 | 7.63 | 6.78 | -1.7583 | Deprecated Baseline |
+
+### 🔹 Feature Ablation Analysis (Ridge α=3.0 on 5 Rolling Folds)
+
+Incremental ablation adding features in ordered steps (detailed in `reports/feature_ablation.csv`):
+
+| Step | Features Added | N Feats | CV MAE (kWh) | CV RMSE (kWh) | Pooled R² | Key Observation |
+|---|---|---|---|---|---|---|
+| **Step 1** | 7 raw inputs (6 weather + `is_weekend_enc`) | 7 | 5.15 | 6.04 | -0.1853 | Fails to track seasonal generation rise |
+| **Step 2** | + `day_of_year` | 8 | 3.79 | 4.60 | 0.3283 | Major jump; captures seasonal elevation |
+| **Step 3** | + `sunshine_ratio` | 9 | 3.25 | 4.09 | 0.4680 | Captures clear sky sun exposure efficiency |
+| **Step 4** | + `rad_clear` | 10 | 3.27 | 4.03 | 0.4889 | Full Set B; best zero-lag error profile |
 
 ---
 
