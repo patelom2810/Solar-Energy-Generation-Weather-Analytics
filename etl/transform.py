@@ -42,7 +42,7 @@ def clean_and_validate(df: pd.DataFrame, dataset_name: str) -> pd.DataFrame:
     
     # Standardize date and hour_ts string formats
     if 'date' in df.columns:
-        df['date'] = pd.to_datetime(df['date']).dt.strftime('%Y-%m-%d')
+        df['date'] = pd.to_datetime(df['date'], format='mixed').dt.strftime('%Y-%m-%d')
     if 'hour_ts' in df.columns:
         df['hour_ts'] = df['hour_ts'].astype(str)
         
@@ -153,12 +153,18 @@ def transform_all(extracted_data: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataF
     # 3. Merge daily solar + weather + date dimension for feature engineering
     daily_merged = pd.merge(df_sd, df_wd, on='date', how='inner')
     if len(daily_merged) > 0 and len(dim_date_df) > 0:
+        dim_date_deduped = dim_date_df.drop_duplicates(subset=['date']).copy()
         daily_merged = pd.merge(
             daily_merged,
-            dim_date_df[['date', 'season', 'is_weekend', 'day_name', 'month_name']],
+            dim_date_deduped[['date', 'season', 'is_weekend', 'day_name', 'month_name', 'day_of_year']],
             on='date',
             how='left'
         )
+        
+    # Assertion: exactly one row per date in merged daily frame
+    assert daily_merged['date'].nunique() == len(daily_merged), (
+        f"Assertion failed: merged daily frame has {len(daily_merged)} rows but {daily_merged['date'].nunique()} unique dates"
+    )
         
     # 4. Compute engineered features using shared module
     daily_features = compute_engineered_features(daily_merged)

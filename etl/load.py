@@ -178,12 +178,16 @@ def refresh_csv_files(transformed_data: Dict[str, pd.DataFrame], data_dir: str =
             if key == 'dim_date' and os.path.exists(target_path):
                 try:
                     existing_dim = pd.read_csv(target_path)
-                    combined = pd.concat([existing_dim, df], ignore_index=True).drop_duplicates(subset=['date'], keep='last')
+                    existing_dim['date'] = pd.to_datetime(existing_dim['date'], format='mixed').dt.strftime('%Y-%m-%d')
+                    df_to_merge = df.copy()
+                    df_to_merge['date'] = pd.to_datetime(df_to_merge['date'], format='mixed').dt.strftime('%Y-%m-%d')
+                    combined = pd.concat([existing_dim, df_to_merge], ignore_index=True).drop_duplicates(subset=['date'], keep='last')
+                    combined = combined.sort_values('date').reset_index(drop=True)
                     combined.to_csv(target_path, index=False)
-                    logger.info(f"✓ Refreshed CSV: {target_path} ({len(combined)} rows preserved)")
+                    logger.info(f"✓ Refreshed CSV: {target_path} ({len(combined)} rows preserved, deduped)")
                     continue
-                except Exception:
-                    pass
+                except Exception as e_dim:
+                    logger.warning(f"Failed to merge existing dim_date: {e_dim}")
             df.to_csv(target_path, index=False)
             logger.info(f"✓ Refreshed CSV: {target_path} ({len(df)} rows)")
 
