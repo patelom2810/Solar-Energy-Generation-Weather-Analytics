@@ -1,0 +1,38 @@
+{
+  "model_name": "Ridge_Set_B",
+  "model_type": "Pipeline",
+  "display_name": "Pipeline (StandardScaler \u2192 Ridge)",
+  "algorithm_family": "L2 Regularized Linear Regression (Ridge, alpha=3.0)",
+  "features": [
+    "shortwave_radiation_sum",
+    "sunshine_duration",
+    "cloud_cover_mean",
+    "temperature_2m_mean",
+    "wind_speed_10m_mean",
+    "rain_sum",
+    "is_weekend_enc",
+    "sunshine_ratio",
+    "rad_clear",
+    "day_of_year"
+  ],
+  "n_features": 10,
+  "feature_set_label": "Feature Set B (weather-only with day_of_year)",
+  "target": "generation_kwh",
+  "training_samples": 89,
+  "cv_strategy": "TimeSeriesSplit(n_splits=5, test_size=10)",
+  "mean_cv_rmse": 4.0082,
+  "mean_cv_mae": 3.1668,
+  "mean_cv_r2": -0.2547,
+  "pooled_r2": 0.4993,
+  "scikit_learn_version": "1.8.0",
+  "xgboost_version": "3.4.1",
+  "pandas_version": "3.0.0",
+  "numpy_version": "2.4.0",
+  "joblib_version": "1.5.3",
+  "anomaly_dates_excluded": [
+    "2026-02-01",
+    "2026-03-31"
+  ],
+  "trained_at": "2026-10-09T10:56:05.547428",
+  "version": "v20261009_105605"
+}
