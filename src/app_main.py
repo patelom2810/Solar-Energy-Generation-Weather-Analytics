@@ -41,6 +41,7 @@ FEATURE_BOUNDS = {
     'temperature_2m_mean': (-50, 60),          # celsius
     'wind_speed_10m_mean': (0, 50),            # m/s
     'rain_sum': (0, 500),                      # mm
+    'day_of_year': (1, 366),                   # calendar day of year
 }
 
 # Flag to track if startup was called
@@ -108,6 +109,9 @@ def load_csv_data(filename):
         # Load fresh data
         try:
             df = pd.read_csv(filepath)
+            if 'dim_date' in filename and 'date' in df.columns:
+                df['date'] = pd.to_datetime(df['date'], format='mixed').dt.strftime('%Y-%m-%d')
+                df = df.drop_duplicates(subset=['date']).reset_index(drop=True)
             csv_cache[filename] = df
             csv_cache_time[filename] = now
             logger.info(f"Loaded CSV: {filename} ({len(df)} rows)")
@@ -318,35 +322,27 @@ def predict():
             logger.warning("Empty JSON payload received in /predict")
             return jsonify({'error': 'Invalid JSON payload'}), 400
         
-        # Validate input bounds for numeric features
-        errors = []
-        for feature, (min_val, max_val) in FEATURE_BOUNDS.items():
-            if feature in data:
-                val = data.get(feature)
-                try:
-                    val = float(val)
-                    if not (min_val <= val <= max_val):
-                        errors.append(f"{feature} must be between {min_val} and {max_val}, got {val}")
-                except (ValueError, TypeError):
-                    errors.append(f"{feature} must be a number, got {type(val).__name__}")
-        
-        # Validate season parameter
-        season = data.get('season', 'Dry')
-        if season not in ['Dry', 'Wet']:
-            errors.append(f"season must be 'Dry' or 'Wet', got '{season}'")
-        
-        # Validate is_weekend parameter
-        is_weekend = data.get('is_weekend', False)
-        if not isinstance(is_weekend, (bool, int)) or (isinstance(is_weekend, int) and is_weekend not in [0, 1]):
-            errors.append(f"is_weekend must be boolean or 0/1, got {type(is_weekend).__name__}")
-        
-        if errors:
+        # Validate input bounds and parameters using shared utility
+        from .utils import validate_prediction_input, prepare_prediction_row
+        is_valid, errors, validated = validate_prediction_input(data)
+        if not is_valid:
             logger.warning(f"Validation failed for predict: {errors}")
             return jsonify({'error': 'Validation failed', 'details': errors}), 400
         
+        season = validated['season']
+        is_weekend = validated['is_weekend']
+        date_param = validated.get('date')
+        day_of_year = validated.get('day_of_year')
+        warning_msg = validated.get('warning')
+        
         # Build feature dictionary using shared feature utility
-        from .utils import prepare_prediction_row
-        row = prepare_prediction_row(data, season=season, is_weekend=is_weekend)
+        row = prepare_prediction_row(
+            data,
+            season=season,
+            is_weekend=is_weekend,
+            date=date_param,
+            day_of_year=day_of_year
+        )
         X = pd.DataFrame([row])[FEATS]
         pred = max(0.0, float(model.predict(X)[0]))
         
@@ -368,11 +364,14 @@ def predict():
         if not success:
             logger.warning(f"Failed to log prediction to database, but prediction was generated: {pred:.3f} kWh")
         
-        logger.info(f"Prediction generated: {pred:.3f} kWh for season={season}, is_weekend={is_weekend}")
-        return jsonify({
+        logger.info(f"Prediction generated: {pred:.3f} kWh for day_of_year={row['day_of_year']}, season={season}")
+        response_payload = {
             'predicted_generation_kwh': round(pred, 3),
-            'status': 'Low' if pred < 5 else 'Normal'
-        })
+            'day_of_year': int(row['day_of_year']),
+            'status': 'Low' if pred < 5 else 'Normal',
+            'warning': warning_msg if warning_msg else None
+        }
+        return jsonify(response_payload)
     
     except Exception as e:
         logger.error(f"Error in predict endpoint: {str(e)}", exc_info=True)

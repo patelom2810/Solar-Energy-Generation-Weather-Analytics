@@ -127,6 +127,10 @@
 
     <form id="predict-form">
         <div class="form-group">
+            <label for="date"><i class="fas fa-calendar-day"></i> Forecast Date</label>
+            <input type="date" id="date" required style="width: 100%; padding: 14px 16px; background: var(--bg-input); border: 1px solid var(--border-glass); border-radius: 10px; color: var(--text-main); font-family: inherit; font-size: 15px;">
+        </div>
+        <div class="form-group">
             <label for="rad"><i class="fas fa-sun"></i> Shortwave Rad. (W/m²)</label>
             <input type="number" id="rad" placeholder="e.g., 24" min="0" max="500" step="0.01" required>
         </div>
@@ -153,8 +157,8 @@
         <div class="form-group">
             <label for="season"><i class="fas fa-leaf"></i> Season</label>
             <select id="season" required>
-                <option value="Dry">Dry</option>
-                <option value="Wet">Wet</option>
+                <option value="Dry">Dry (Historical Baseline)</option>
+                <option value="Wet">Wet (Unseen / Warning)</option>
             </select>
         </div>
         <div class="form-group" style="display: flex; align-items: flex-end;">
@@ -177,6 +181,20 @@
 </main>
 
 <script>
+// Set default date to today
+const dateInput = document.getElementById('date');
+const todayStr = new Date().toISOString().split('T')[0];
+dateInput.value = todayStr;
+
+// Auto-toggle weekend checkbox based on selected date
+dateInput.addEventListener('change', (e) => {
+    if (e.target.value) {
+        const parts = e.target.value.split('-');
+        const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+        const day = dt.getDay(); // 0 is Sunday, 6 is Saturday
+        document.getElementById('weekend').checked = (day === 0 || day === 6);
+    }
+});
 
 document.getElementById('predict-form')
 .addEventListener('submit', async (e) => {
@@ -188,6 +206,7 @@ document.getElementById('predict-form')
     resultDiv.classList.add('show');
 
     const payload = {
+        date: document.getElementById('date').value,
         shortwave_radiation_sum: +document.getElementById('rad').value,
         sunshine_duration: +document.getElementById('sun').value,
         cloud_cover_mean: +document.getElementById('cloud').value,
@@ -219,15 +238,29 @@ document.getElementById('predict-form')
         const statusClass = data.status === 'Low' ? 'status-warning' : 'status-success';
         const statusIcon = data.status === 'Low' ? 'fa-exclamation-circle' : 'fa-check-circle';
         
+        let warningHtml = '';
+        if (data.warning) {
+            warningHtml = `
+            <div style="margin-top: 12px; padding: 10px 14px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; font-size: 13px; color: #b45309; display: flex; align-items: flex-start; gap: 8px;">
+                <i class="fas fa-triangle-exclamation" style="margin-top: 2px;"></i>
+                <span><strong>Seasonal Notice:</strong> ${data.warning}</span>
+            </div>`;
+        }
+        
         resultDiv.innerHTML = `
             <div class="result-item">
                 <span><i class="fas fa-bolt"></i> Predicted Generation:</span>
-                <span class="result-value" style="color: #ef4444; font-size: 20px; font-weight: 800;">${data.predicted_generation_kwh} kWh</span>
+                <span class="result-value" style="color: #0284c7; font-size: 22px; font-weight: 800;">${data.predicted_generation_kwh} kWh</span>
+            </div>
+            <div class="result-item">
+                <span><i class="fas fa-calendar-day"></i> Day of Year:</span>
+                <span style="font-weight: 600;">Day ${data.day_of_year || '–'}</span>
             </div>
             <div class="result-item">
                 <span><i class="fas fa-info-circle"></i> Status:</span>
                 <span class="${statusClass}"><i class="fas ${statusIcon}"></i> ${data.status}</span>
             </div>
+            ${warningHtml}
             <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(14, 165, 233, 0.2); font-size: 12px; color: #64748b;">
                 <i class="fas fa-check"></i> Prediction saved to database
             </div>
@@ -236,7 +269,6 @@ document.getElementById('predict-form')
         resultDiv.innerHTML = `<div style="color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Error: ${error.message}</div>`;
     }
 });
-
 </script>
 
 </body>

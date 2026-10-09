@@ -156,7 +156,10 @@ def compute_model_scores(model, features, solar_daily, weather_daily):
     """
     try:
         from .features import compute_engineered_features
+        from .utils import filter_anomalies
         merged = solar_daily.merge(weather_daily, on='date', how='inner')
+        merged = merged.drop_duplicates(subset=['date']).reset_index(drop=True)
+        merged = filter_anomalies(merged)
         merged = compute_engineered_features(merged)
         
         X = merged[features]
