@@ -239,18 +239,24 @@ API_DOCS = {
                 "tags": ["Model"],
                 "responses": {
                     "200": {
-                        "description": "Model metrics",
+                        "description": "Model metrics with rolling validation and training fit breakdown",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "type": "object",
                                     "properties": {
                                         "model_type": {"type": "string"},
-                                        "r2_score": {"type": "number"},
-                                        "mae": {"type": "number"},
-                                        "rmse": {"type": "number"},
-                                        "mape": {"type": "number"},
+                                        "r2_score": {"type": "number", "description": "Rolling validation R² on unseen test days"},
+                                        "mae": {"type": "number", "description": "Rolling validation MAE on unseen test days"},
+                                        "rmse": {"type": "number", "description": "Rolling validation RMSE on unseen test days"},
+                                        "baseline_mae": {"type": "number", "description": "Baseline mean model MAE"},
+                                        "pct_error_reduction": {"type": "number", "description": "Percentage error reduction vs baseline"},
+                                        "n_folds": {"type": "integer"},
+                                        "n_test_days": {"type": "integer"},
                                         "n_samples": {"type": "integer"},
+                                        "rolling_validation": {"type": "object", "description": "Out-of-sample expanding-window 5-fold cross-validation metrics"},
+                                        "training_fit": {"type": "object", "description": "In-sample training fit on 89 rows (for reference)"},
+                                        "model_comparison": {"type": "array", "description": "Comparative performance table across model architectures"},
                                         "feature_importances": {"type": "object"},
                                         "predictions_vs_actual": {"type": "array"}
                                     }

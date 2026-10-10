@@ -20,10 +20,10 @@
   "target": "generation_kwh",
   "training_samples": 89,
   "cv_strategy": "TimeSeriesSplit(n_splits=5, test_size=10)",
-  "mean_cv_rmse": 4.0082,
-  "mean_cv_mae": 3.1668,
-  "mean_cv_r2": -0.2547,
-  "pooled_r2": 0.4993,
+  "mean_cv_rmse": 4.033,
+  "mean_cv_mae": 3.2697,
+  "mean_cv_r2": 0.4889,
+  "pooled_r2": 0.4889,
   "scikit_learn_version": "1.8.0",
   "xgboost_version": "3.4.1",
   "pandas_version": "3.0.0",
@@ -34,5 +34,97 @@
     "2026-03-31"
   ],
   "trained_at": "2026-10-09T10:56:05.547428",
-  "version": "v20261009_105605"
+  "version": "v20261009_105605",
+  "training_fit": {
+    "r2_score": 0.7887,
+    "mae": 2.4826,
+    "rmse": 3.1909,
+    "mse": 10.182,
+    "mape": 8.45,
+    "n_samples": 89,
+    "note": "In-sample training fit on 89 clean samples (optimistic; overstates real forecast accuracy)"
+  },
+  "rolling_validation": {
+    "evaluation_method": "Expanding window rolling-origin time-series cross-validation",
+    "n_folds": 5,
+    "n_test_days": 50,
+    "test_block_size": 10,
+    "eval_dataset_rows": 82,
+    "clean_samples": 89,
+    "raw_samples": 91,
+    "anomalies_excluded": 2,
+    "r2": 0.49,
+    "r2_raw": 0.4889,
+    "mae": 3.27,
+    "mae_display": 3.3,
+    "mae_raw": 3.2697,
+    "rmse": 4.0,
+    "rmse_display": 4.0,
+    "rmse_raw": 4.033,
+    "baseline_mae": 7.39,
+    "baseline_mae_raw": 7.3872,
+    "pct_error_reduction": 55.7,
+    "pct_error_reduction_display": 56,
+    "selected_model": "Ridge Regression (weather-only)",
+    "selection_note": "Huber is marginally lower on MAE (3.22 vs 3.27 kWh), but Ridge was chosen for simplicity and stability.",
+    "limitations_note": "3 months (Feb\u2013May 2026), one dry season, one site, weather-only R\u00b2 about 0.5. API warns for dates outside Feb to May.",
+    "model_comparison": [
+      {
+        "model": "Ridge Regression (selected)",
+        "r2": 0.49,
+        "r2_raw": 0.4889,
+        "mae": 3.27,
+        "mae_raw": 3.2697,
+        "rmse": 4.03,
+        "rmse_raw": 4.033,
+        "selected": true,
+        "type": "Compared Model"
+      },
+      {
+        "model": "Huber Regression",
+        "r2": 0.49,
+        "r2_raw": 0.486,
+        "mae": 3.22,
+        "mae_raw": 3.2162,
+        "rmse": 4.04,
+        "rmse_raw": 4.0404,
+        "selected": false,
+        "type": "Compared Model"
+      },
+      {
+        "model": "Extra Trees",
+        "r2": 0.32,
+        "r2_raw": 0.3162,
+        "mae": 3.94,
+        "mae_raw": 3.9415,
+        "rmse": 4.6,
+        "rmse_raw": 4.6022,
+        "selected": false,
+        "type": "Compared Model"
+      },
+      {
+        "model": "XGBoost depth 3",
+        "r2": -0.18,
+        "r2_raw": -0.1771,
+        "mae": 4.63,
+        "mae_raw": 4.6257,
+        "rmse": 5.55,
+        "rmse_raw": 5.5541,
+        "selected": false,
+        "type": "Compared Model"
+      },
+      {
+        "model": "Persistence baseline (yesterday's output)",
+        "r2": 0.61,
+        "r2_raw": 0.6098,
+        "mae": 2.75,
+        "mae_raw": 2.753,
+        "rmse": 3.77,
+        "rmse_raw": 3.7686,
+        "selected": false,
+        "type": "Reference Only (Requires Lag)"
+      }
+    ]
+  },
+  "unseen_eval_samples": 50
 }

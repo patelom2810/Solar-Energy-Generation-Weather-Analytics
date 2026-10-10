@@ -145,6 +145,10 @@ def compute_model_scores(model, features, solar_daily, weather_daily):
     """
     Compute model performance metrics.
     
+    Returns both:
+    1. rolling_validation: Out-of-sample expanding-window 5-fold rolling validation (50 unseen days)
+    2. training_fit: In-sample metrics on the 89 training days (kept separate as secondary reference)
+    
     Args:
         model: Trained model
         features (list): Feature names
@@ -157,6 +161,8 @@ def compute_model_scores(model, features, solar_daily, weather_daily):
     try:
         from .features import compute_engineered_features
         from .utils import filter_anomalies
+        from .rolling_validation import compute_rolling_validation_metrics
+        
         merged = solar_daily.merge(weather_daily, on='date', how='inner')
         merged = merged.drop_duplicates(subset=['date']).reset_index(drop=True)
         merged = filter_anomalies(merged)
@@ -168,22 +174,53 @@ def compute_model_scores(model, features, solar_daily, weather_daily):
         
         fi = extract_model_feature_importances(model, features)
         
-        metrics = {
-            'model_type': get_model_display_name(model),
+        # In-sample metrics (training fit)
+        training_fit = {
             'r2_score': round(float(r2_score(y, preds)), 4),
             'mae': round(float(mean_absolute_error(y, preds)), 4),
             'rmse': round(float(np.sqrt(mean_squared_error(y, preds))), 4),
             'mse': round(float(mean_squared_error(y, preds)), 4),
             'mape': round(float(mean_absolute_percentage_error(y, preds)) * 100, 2),
             'n_samples': int(len(y)),
+            'note': 'In-sample training fit on 89 clean samples (optimistic; overstates real forecast accuracy)'
+        }
+        
+        # Rolling-origin cross-validation metrics (out-of-sample on unseen days)
+        rolling_val = compute_rolling_validation_metrics(solar_daily, weather_daily)
+        
+        metrics = {
+            'model_type': get_model_display_name(model),
+            # Primary headline metrics reported from rolling validation on unseen days
+            'r2_score': rolling_val['r2'],
+            'r2_raw': rolling_val['r2_raw'],
+            'mae': rolling_val['mae'],
+            'mae_display': rolling_val['mae_display'],
+            'mae_raw': rolling_val['mae_raw'],
+            'rmse': rolling_val['rmse'],
+            'rmse_display': rolling_val['rmse_display'],
+            'rmse_raw': rolling_val['rmse_raw'],
+            'baseline_mae': rolling_val['baseline_mae'],
+            'pct_error_reduction': rolling_val['pct_error_reduction'],
+            'pct_error_reduction_display': rolling_val['pct_error_reduction_display'],
+            'n_folds': rolling_val['n_folds'],
+            'n_test_days': rolling_val['n_test_days'],
+            'n_samples': training_fit['n_samples'],
+            'evaluation_mode': 'rolling_validation',
+            'evaluation_label': f"Rolling validation, {rolling_val['n_test_days']} unseen days ({rolling_val['n_folds']} folds × {rolling_val['test_block_size']} days)",
+            'neutral_interpretation': 'About half of day-to-day variation is explained.',
+            'limitations_note': rolling_val['limitations_note'],
+            'selection_note': rolling_val['selection_note'],
+            'model_comparison': rolling_val['model_comparison'],
             'feature_importances': fi,
+            'rolling_validation': rolling_val,
+            'training_fit': training_fit,
             'predictions_vs_actual': [
                 {'actual': round(float(a), 3), 'predicted': round(float(p), 3)}
                 for a, p in zip(y.tail(30).values, preds[-30:])
             ]
         }
         
-        logger.info(f"Model metrics computed: R²={metrics['r2_score']}, MAE={metrics['mae']}")
+        logger.info(f"Model metrics computed: Rolling R²={metrics['r2_score']}, MAE={metrics['mae']} kWh, In-sample R²={training_fit['r2_score']}")
         return metrics
         
     except Exception as e:

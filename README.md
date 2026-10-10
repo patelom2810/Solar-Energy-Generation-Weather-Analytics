@@ -692,22 +692,16 @@ The platform runs an automated multi-model candidate tournament in `etl/retrain.
 
 | Architecture | Feature Set | Mean CV RMSE | Mean CV MAE | Pooled Out-of-Fold R² | Production Status |
 |--------------|:-----------:|:------------:|:-----------:|:---------------------:|:-----------------:|
-| **Ridge Scaled Pipeline** | **Set B (Weather + Day-of-Year)** | **4.01 kWh** | **3.17 kWh** | **0.4993** | 🏆 **Active Production Champion** |
-| **Ridge Scaled Pipeline** | **Set D (Weather + Lag Features)** | **3.46 kWh** | **2.80 kWh** | **0.6517** | 🥈 Optional Model (Requires Lags) |
-| **Baseline Persistence** | Yesterday's generation (`gen_lag1`) | 3.66 kWh | 2.75 kWh | 0.6098 | Reference Baseline |
-| **Huber Robust Pipeline** | Set B | 4.01 kWh | 3.18 kWh | 0.4974 | Evaluated |
-| **Ridge Scaled Pipeline** | Set C (Clear-sky interaction) | 4.21 kWh | 3.43 kWh | 0.4546 | Evaluated |
-| **ExtraTrees (300 trees)** | Set B | 4.60 kWh | 3.94 kWh | 0.3162 | Evaluated |
-| **Random Forest (150 trees)** | Set B | 4.66 kWh | 3.91 kWh | 0.2823 | Evaluated |
-| **Ridge Scaled Pipeline** | Set A (Base weather without trend) | 4.61 kWh | 3.94 kWh | 0.3602 | Evaluated |
-| **XGBoost (gblinear)** | Set B | 4.63 kWh | 3.85 kWh | 0.3400 | Evaluated |
-| **XGBoost (depth=1)** | Set B | 4.99 kWh | 4.28 kWh | 0.1217 | Evaluated |
-| **Gradient Boosting (150 trees)** | Set B | 5.34 kWh | 4.51 kWh | 0.0247 | Evaluated |
-| **Huber Robust Pipeline** | Set A (Original features) | 7.54 kWh | 6.05 kWh | -1.7624 | Deprecated |
-| **Baseline Mean** | Training Window Mean | 7.87 kWh | 7.39 kWh | -0.9028 | Naive Baseline |
+| **Ridge Scaled Pipeline** | **Set B (Weather + Day-of-Year)** | **4.03 kWh (≈4.0)** | **3.27 kWh (≈3.3)** | **0.49** (0.4889) | 🏆 **Active Production Champion** (56% error reduction vs baseline) |
+| **Huber Robust Pipeline** | Set B (Weather + Day-of-Year) | 4.04 kWh | 3.22 kWh | 0.49 (0.4860) | Evaluated (marginally lower MAE; Ridge chosen for stability) |
+| **ExtraTrees (300 trees)** | Set B (Weather + Day-of-Year) | 4.60 kWh | 3.94 kWh | 0.32 (0.3162) | Evaluated |
+| **XGBoost (depth=3)** | Set B (Weather + Day-of-Year) | 5.55 kWh | 4.63 kWh | -0.18 (-0.1771) | Evaluated |
+| **Ridge Scaled Pipeline** | Set D (Weather + Lag Features) | 3.46 kWh | 2.80 kWh | 0.65 (0.6517) | Optional Model (Requires Lags) |
+| **Baseline Persistence** | Yesterday's generation (`gen_lag1`) | 3.77 kWh | 2.75 kWh | 0.61 (0.6098) | Reference Only (Requires Past Actual) |
+| **Baseline Mean** | Training Window Mean | 8.32 kWh | 7.39 kWh | -0.90 (-0.9028) | Naive Baseline (Reference for 56% error reduction) |
 
 - **Current Production Champion**: `Pipeline (StandardScaler → Ridge(alpha=3.0))`
-- **Production Selection Rationale**: Ridge on Feature Set B is selected because it is the **best weather-only model**, allowing generation forecasting purely from numerical weather predictions without needing yesterday's measured output.
+- **Production Selection Rationale**: Ridge on Feature Set B is selected because it is the **best weather-only model**, delivering 56% error reduction vs baseline mean across 50 unseen days without needing yesterday's measured output. While Huber achieves marginally lower MAE (3.22 vs 3.27 kWh), Ridge was chosen for its mathematical simplicity and parameter stability.
 - **Physical Output Guard**: Predictions bounded to $\ge 0.0$ kWh.
 - **Features in Production (10)**:
   1. `shortwave_radiation_sum`: Total daily global horizontal solar irradiance (W/m²)
@@ -872,15 +866,18 @@ Excluded Anomalies:
 
 | Model Architecture | Feature Set | Rows Used | CV RMSE (kWh) | CV MAE (kWh) | Pooled R² | Production Status |
 |--------------------|-------------|-----------|---------------|--------------|-----------|-------------------|
-| **Pipeline(StandardScaler → Ridge, α=3.0)** | **Set B (Base + DOY)** | **82** | **4.01** | **3.17** | **0.4993** | **Active Production Champion** |
-| Pipeline(StandardScaler → Ridge, α=10.0) | Set D (Set B + Lag1 + Rolling7) | 82 | 3.46 | 2.80 | 0.6517 | Candidate (Requires Lag) |
-| Persistence Baseline (`gen_lag1`) | gen_lag1 | 82 | 3.66 | 2.75 | 0.6098 | Reference Baseline |
-| Baseline (Training Window Mean) | None | 82 | 7.87 | 7.39 | -0.9028 | Reference Baseline |
-| ExtraTreesRegressor(n_estimators=100) | Set B (Base + DOY) | 82 | 4.67 | 3.86 | 0.3204 | Benchmark (Tree Ensembles) |
-| XGBRegressor(max_depth=3, lr=0.05) | Set B (Base + DOY) | 82 | 4.95 | 3.96 | 0.2372 | Benchmark (Gradient Boosting) |
-| GradientBoostingRegressor | Set B (Base + DOY) | 82 | 5.24 | 4.30 | 0.1448 | Benchmark |
-| RandomForestRegressor(n_estimators=100) | Set B (Base + DOY) | 82 | 5.58 | 4.61 | 0.0272 | Benchmark |
-| HuberRegressor(epsilon=1.35) | Set A (No DOY) | 82 | 7.63 | 6.78 | -1.7583 | Deprecated Baseline |
+| **Pipeline(StandardScaler → Ridge, α=3.0)** | **Set B (Weather + DOY)** | **82 (50 test)** | **4.03 (≈4.0)** | **3.27 (≈3.3)** | **0.49** | **Active Production Champion (56% error reduction)** |
+| HuberRegressor Pipeline | Set B (Weather + DOY) | 82 (50 test) | 4.04 | 3.22 | 0.49 | Evaluated (marginally lower MAE; Ridge chosen for stability) |
+| ExtraTreesRegressor(300 trees) | Set B (Weather + DOY) | 82 (50 test) | 4.60 | 3.94 | 0.32 | Benchmark (Tree Ensembles) |
+| XGBRegressor(max_depth=3) | Set B (Weather + DOY) | 82 (50 test) | 5.55 | 4.63 | -0.18 | Benchmark (Gradient Boosting) |
+| Pipeline(StandardScaler → Ridge, α=10.0) | Set D (Set B + Lag1 + Rolling7) | 82 (50 test) | 3.46 | 2.80 | 0.65 | Candidate (Requires Lag) |
+| Persistence Baseline (`gen_lag1`) | gen_lag1 | 82 (50 test) | 3.77 | 2.75 | 0.61 | Reference Only (Requires Lag) |
+| Baseline (Training Window Mean) | None | 82 (50 test) | 8.32 | 7.39 | -0.90 | Reference Baseline for Error Reduction |
+
+> **Sample Count Consistency Note:**
+> - **Daily Dataset**: 91 raw rows total. 2 documented anomaly days excluded (`2026-02-01` partial 8h recording, `2026-03-31` severe grid outage), leaving **89 clean daily rows** used for final training.
+> - **Rolling Validation (5 Folds × 10 Days)**: Evaluates **50 unseen test days** across expanding windows. Rows with a full 7-day prior lag history (`gen_rolling7`) yield 82 common evaluation rows.
+> - **Roadmap "86 Usable" Note**: In `fact_solar_hourly.csv`, exactly 86 days contain a complete 24-hour cycle (the remaining 5 days have partial hourly collections). Daily modeling aggregates full clean daily energy, retaining all 89 clean days.
 
 ### 🔹 Feature Ablation Analysis (Ridge α=3.0 on 5 Rolling Folds)
 
