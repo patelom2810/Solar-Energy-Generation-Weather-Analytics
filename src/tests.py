@@ -322,8 +322,9 @@ class TestModelManager:
         from src.models import ModelManager
         mm = ModelManager()
         assert mm.is_loaded is True
-        assert len(mm.get_feature_names()) == 10
+        assert len(mm.get_feature_names()) == 9
         assert 'day_of_year' in mm.get_feature_names()
+        assert 'is_weekend_enc' not in mm.get_feature_names()
         assert 'season_enc' not in mm.get_feature_names()
 
     def test_compute_model_scores(self):
@@ -337,17 +338,17 @@ class TestModelManager:
         assert 'rmse' in scores
         assert 'mae' in scores
         assert 'feature_importances' in scores
-        assert len(scores['feature_importances']) == 10
+        assert len(scores['feature_importances']) == 9
         assert scores['n_samples'] == 89  # 91 minus 2 anomalies
         assert 'rolling_validation' in scores
-        assert scores['rolling_validation']['r2'] == 0.49
-        assert scores['rolling_validation']['mae_display'] == 3.3
-        assert scores['rolling_validation']['rmse_display'] == 4.0
+        assert scores['rolling_validation']['r2'] == 0.51
+        assert scores['rolling_validation']['mae_display'] == 3.24
+        assert scores['rolling_validation']['rmse_display'] == 3.98
         assert scores['rolling_validation']['pct_error_reduction_display'] == 56
         assert scores['rolling_validation']['n_folds'] == 5
         assert scores['rolling_validation']['n_test_days'] == 50
         assert 'training_fit' in scores
-        assert scores['training_fit']['r2_score'] == 0.7887
+        assert scores['training_fit']['r2_score'] == 0.7864
         assert scores['training_fit']['n_samples'] == 89
 
     def test_model_manager_non_negative_predictions(self):
@@ -507,9 +508,9 @@ class TestPredictionAPIEndpoint:
         assert 'day_of_year' in data['feature_importances']
         assert 'rolling_validation' in data
         assert 'training_fit' in data
-        assert data['rolling_validation']['r2'] == 0.49
-        assert data['rolling_validation']['mae_display'] == 3.3
-        assert data['rolling_validation']['rmse_display'] == 4.0
+        assert data['rolling_validation']['r2'] == 0.51
+        assert data['rolling_validation']['mae_display'] == 3.24
+        assert data['rolling_validation']['rmse_display'] == 3.98
         assert data['rolling_validation']['pct_error_reduction_display'] == 56
         assert len(data['model_comparison']) == 5
 
@@ -520,9 +521,9 @@ class TestRollingValidation:
     def test_rolling_validation_metrics(self):
         from src.rolling_validation import compute_rolling_validation_metrics
         res = compute_rolling_validation_metrics()
-        assert res['r2'] == 0.49
-        assert res['mae_display'] == 3.3
-        assert res['rmse_display'] == 4.0
+        assert res['r2'] == 0.51
+        assert res['mae_display'] == 3.24
+        assert res['rmse_display'] == 3.98
         assert res['pct_error_reduction_display'] == 56
         assert res['n_folds'] == 5
         assert res['n_test_days'] == 50
@@ -533,15 +534,15 @@ class TestRollingValidation:
         # Verify model comparison members
         cmp_dict = {m['model']: m for m in res['model_comparison']}
         assert 'Ridge Regression (selected)' in cmp_dict
-        assert cmp_dict['Ridge Regression (selected)']['r2'] == 0.49
-        assert cmp_dict['Ridge Regression (selected)']['mae'] == 3.27
+        assert cmp_dict['Ridge Regression (selected)']['r2'] == 0.51
+        assert cmp_dict['Ridge Regression (selected)']['mae'] == 3.24
         assert cmp_dict['Huber Regression']['r2'] == 0.49
-        assert cmp_dict['Huber Regression']['mae'] == 3.22
-        assert cmp_dict['Extra Trees']['r2'] == 0.32
-        assert cmp_dict['Extra Trees']['mae'] == 3.94
+        assert cmp_dict['Huber Regression']['mae'] == 3.20
+        assert cmp_dict['Extra Trees']['r2'] == 0.33
+        assert cmp_dict['Extra Trees']['mae'] == 3.86
         if 'XGBoost depth 3' in cmp_dict:
-            assert cmp_dict['XGBoost depth 3']['r2'] == -0.18
-            assert cmp_dict['XGBoost depth 3']['mae'] == 4.63
+            assert cmp_dict['XGBoost depth 3']['r2'] == -0.16
+            assert cmp_dict['XGBoost depth 3']['mae'] == 4.62
         assert cmp_dict["Persistence baseline (yesterday's output)"]['r2'] == 0.61
         assert cmp_dict["Persistence baseline (yesterday's output)"]['mae'] == 2.75
 

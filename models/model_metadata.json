@@ -10,20 +10,19 @@
     "temperature_2m_mean",
     "wind_speed_10m_mean",
     "rain_sum",
-    "is_weekend_enc",
     "sunshine_ratio",
     "rad_clear",
     "day_of_year"
   ],
-  "n_features": 10,
-  "feature_set_label": "Feature Set B (weather-only with day_of_year)",
+  "n_features": 9,
+  "feature_set_label": "Feature Set B (9 weather-only inputs with day_of_year)",
   "target": "generation_kwh",
   "training_samples": 89,
   "cv_strategy": "TimeSeriesSplit(n_splits=5, test_size=10)",
-  "mean_cv_rmse": 4.033,
-  "mean_cv_mae": 3.2697,
-  "mean_cv_r2": 0.4889,
-  "pooled_r2": 0.4889,
+  "mean_cv_rmse": 3.9776,
+  "mean_cv_mae": 3.2438,
+  "mean_cv_r2": 0.5075,
+  "pooled_r2": 0.5075,
   "scikit_learn_version": "1.8.0",
   "xgboost_version": "3.4.1",
   "pandas_version": "3.0.0",
@@ -36,11 +35,11 @@
   "trained_at": "2026-10-09T10:56:05.547428",
   "version": "v20261009_105605",
   "training_fit": {
-    "r2_score": 0.7887,
-    "mae": 2.4826,
-    "rmse": 3.1909,
-    "mse": 10.182,
-    "mape": 8.45,
+    "r2_score": 0.7864,
+    "mae": 2.4872,
+    "rmse": 3.2079,
+    "mse": 10.2904,
+    "mape": 8.53,
     "n_samples": 89,
     "note": "In-sample training fit on 89 clean samples (optimistic; overstates real forecast accuracy)"
   },
@@ -53,63 +52,66 @@
     "clean_samples": 89,
     "raw_samples": 91,
     "anomalies_excluded": 2,
-    "r2": 0.49,
-    "r2_raw": 0.4889,
-    "mae": 3.27,
-    "mae_display": 3.3,
-    "mae_raw": 3.2697,
-    "rmse": 4.0,
-    "rmse_display": 4.0,
-    "rmse_raw": 4.033,
+    "sample_count_summary": "91 raw rows, 2 anomaly days excluded, 89 clean rows.",
+    "warmup_summary": "Validation uses 82 rows after the 7-day warm-up.",
+    "full_sample_summary": "91 raw rows, 2 anomaly days excluded, 89 clean rows. Validation uses 82 rows after the 7-day warm-up.",
+    "r2": 0.51,
+    "r2_raw": 0.5075,
+    "mae": 3.24,
+    "mae_display": 3.24,
+    "mae_raw": 3.2438,
+    "rmse": 3.98,
+    "rmse_display": 3.98,
+    "rmse_raw": 3.9776,
     "baseline_mae": 7.39,
     "baseline_mae_raw": 7.3872,
-    "pct_error_reduction": 55.7,
+    "pct_error_reduction": 56.1,
     "pct_error_reduction_display": 56,
     "selected_model": "Ridge Regression (weather-only)",
-    "selection_note": "Huber is marginally lower on MAE (3.22 vs 3.27 kWh), but Ridge was chosen for simplicity and stability.",
-    "limitations_note": "3 months (Feb\u2013May 2026), one dry season, one site, weather-only R\u00b2 about 0.5. API warns for dates outside Feb to May.",
+    "selection_note": "Ridge is the active champion weather-only model, delivering the highest R\u00b2 (0.51) and lowest RMSE (3.98 kWh) across 50 unseen days. Huber achieves marginally lower MAE (3.20 vs 3.24 kWh), but Ridge is chosen for superior overall variance explained (R\u00b2 0.51 vs 0.49) and parameter stability.",
+    "limitations_note": "3 months (Feb\u2013May 2026), one dry season, one site, weather-only R\u00b2 about 0.51. API warns for dates outside Feb to May.",
     "model_comparison": [
       {
         "model": "Ridge Regression (selected)",
-        "r2": 0.49,
-        "r2_raw": 0.4889,
-        "mae": 3.27,
-        "mae_raw": 3.2697,
-        "rmse": 4.03,
-        "rmse_raw": 4.033,
+        "r2": 0.51,
+        "r2_raw": 0.5075,
+        "mae": 3.24,
+        "mae_raw": 3.2438,
+        "rmse": 3.98,
+        "rmse_raw": 3.9776,
         "selected": true,
         "type": "Compared Model"
       },
       {
         "model": "Huber Regression",
         "r2": 0.49,
-        "r2_raw": 0.486,
-        "mae": 3.22,
-        "mae_raw": 3.2162,
-        "rmse": 4.04,
-        "rmse_raw": 4.0404,
+        "r2_raw": 0.4859,
+        "mae": 3.2,
+        "mae_raw": 3.2007,
+        "rmse": 4.06,
+        "rmse_raw": 4.0552,
         "selected": false,
         "type": "Compared Model"
       },
       {
         "model": "Extra Trees",
-        "r2": 0.32,
-        "r2_raw": 0.3162,
-        "mae": 3.94,
-        "mae_raw": 3.9415,
-        "rmse": 4.6,
-        "rmse_raw": 4.6022,
+        "r2": 0.33,
+        "r2_raw": 0.3267,
+        "mae": 3.86,
+        "mae_raw": 3.8638,
+        "rmse": 4.56,
+        "rmse_raw": 4.5578,
         "selected": false,
         "type": "Compared Model"
       },
       {
         "model": "XGBoost depth 3",
-        "r2": -0.18,
-        "r2_raw": -0.1771,
-        "mae": 4.63,
-        "mae_raw": 4.6257,
-        "rmse": 5.55,
-        "rmse_raw": 5.5541,
+        "r2": -0.16,
+        "r2_raw": -0.1571,
+        "mae": 4.62,
+        "mae_raw": 4.6249,
+        "rmse": 5.54,
+        "rmse_raw": 5.5425,
         "selected": false,
         "type": "Compared Model"
       },
@@ -124,7 +126,211 @@
         "selected": false,
         "type": "Reference Only (Requires Lag)"
       }
+    ],
+    "oof_predictions": [
+      {
+        "actual": 29.46,
+        "predicted": 31.316
+      },
+      {
+        "actual": 24.133,
+        "predicted": 32.229
+      },
+      {
+        "actual": 25.826,
+        "predicted": 31.309
+      },
+      {
+        "actual": 28.964,
+        "predicted": 31.969
+      },
+      {
+        "actual": 31.383,
+        "predicted": 30.248
+      },
+      {
+        "actual": 31.626,
+        "predicted": 27.963
+      },
+      {
+        "actual": 32.594,
+        "predicted": 30.298
+      },
+      {
+        "actual": 33.854,
+        "predicted": 32.472
+      },
+      {
+        "actual": 33.004,
+        "predicted": 31.681
+      },
+      {
+        "actual": 34.136,
+        "predicted": 31.435
+      },
+      {
+        "actual": 31.506,
+        "predicted": 34.302
+      },
+      {
+        "actual": 33.336,
+        "predicted": 33.809
+      },
+      {
+        "actual": 35.294,
+        "predicted": 33.357
+      },
+      {
+        "actual": 37.473,
+        "predicted": 34.381
+      },
+      {
+        "actual": 32.887,
+        "predicted": 32.936
+      },
+      {
+        "actual": 37.212,
+        "predicted": 33.851
+      },
+      {
+        "actual": 24.875,
+        "predicted": 33.441
+      },
+      {
+        "actual": 24.62,
+        "predicted": 35.437
+      },
+      {
+        "actual": 24.693,
+        "predicted": 34.992
+      },
+      {
+        "actual": 27.954,
+        "predicted": 35.434
+      },
+      {
+        "actual": 26.331,
+        "predicted": 33.05
+      },
+      {
+        "actual": 30.079,
+        "predicted": 34.195
+      },
+      {
+        "actual": 39.949,
+        "predicted": 33.713
+      },
+      {
+        "actual": 38.346,
+        "predicted": 36.589
+      },
+      {
+        "actual": 37.613,
+        "predicted": 33.828
+      },
+      {
+        "actual": 41.883,
+        "predicted": 36.226
+      },
+      {
+        "actual": 37.557,
+        "predicted": 36.196
+      },
+      {
+        "actual": 40.201,
+        "predicted": 39.432
+      },
+      {
+        "actual": 43.348,
+        "predicted": 35.992
+      },
+      {
+        "actual": 44.673,
+        "predicted": 40.374
+      },
+      {
+        "actual": 40.502,
+        "predicted": 41.247
+      },
+      {
+        "actual": 42.596,
+        "predicted": 42.402
+      },
+      {
+        "actual": 41.133,
+        "predicted": 43.573
+      },
+      {
+        "actual": 41.436,
+        "predicted": 39.934
+      },
+      {
+        "actual": 40.633,
+        "predicted": 34.707
+      },
+      {
+        "actual": 40.548,
+        "predicted": 40.421
+      },
+      {
+        "actual": 32.384,
+        "predicted": 38.401
+      },
+      {
+        "actual": 41.673,
+        "predicted": 43.452
+      },
+      {
+        "actual": 40.369,
+        "predicted": 45.206
+      },
+      {
+        "actual": 42.423,
+        "predicted": 44.765
+      },
+      {
+        "actual": 41.002,
+        "predicted": 44.67
+      },
+      {
+        "actual": 41.453,
+        "predicted": 42.701
+      },
+      {
+        "actual": 42.724,
+        "predicted": 40.754
+      },
+      {
+        "actual": 41.296,
+        "predicted": 41.397
+      },
+      {
+        "actual": 41.852,
+        "predicted": 40.567
+      },
+      {
+        "actual": 36.65,
+        "predicted": 39.882
+      },
+      {
+        "actual": 40.937,
+        "predicted": 40.685
+      },
+      {
+        "actual": 41.593,
+        "predicted": 42.301
+      },
+      {
+        "actual": 44.301,
+        "predicted": 44.03
+      },
+      {
+        "actual": 42.268,
+        "predicted": 43.954
+      }
     ]
   },
-  "unseen_eval_samples": 50
+  "unseen_eval_samples": 50,
+  "sample_count_summary": "91 raw rows, 2 anomaly days excluded, 89 clean rows.",
+  "warmup_summary": "Validation uses 82 rows after the 7-day warm-up."
 }

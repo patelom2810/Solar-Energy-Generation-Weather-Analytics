@@ -214,7 +214,10 @@ def compute_model_scores(model, features, solar_daily, weather_daily):
             'feature_importances': fi,
             'rolling_validation': rolling_val,
             'training_fit': training_fit,
-            'predictions_vs_actual': [
+            'sample_count_summary': rolling_val.get('sample_count_summary', "91 raw rows, 2 anomaly days excluded, 89 clean rows."),
+            'warmup_summary': rolling_val.get('warmup_summary', "Validation uses 82 rows after the 7-day warm-up."),
+            'full_sample_summary': rolling_val.get('full_sample_summary', "91 raw rows, 2 anomaly days excluded, 89 clean rows. Validation uses 82 rows after the 7-day warm-up."),
+            'predictions_vs_actual': rolling_val.get('oof_predictions') or [
                 {'actual': round(float(a), 3), 'predicted': round(float(p), 3)}
                 for a, p in zip(y.tail(30).values, preds[-30:])
             ]

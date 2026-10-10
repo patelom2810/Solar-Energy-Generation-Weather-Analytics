@@ -486,9 +486,9 @@ curl http://localhost:8000/health
     ],
     "retrain_status": "model_promoted",
     "model_score": {
-      "r2": 0.4993,
-      "mae": 3.1678,
-      "rmse": 4.0135,
+      "r2": 0.5075,
+      "mae": 3.2438,
+      "rmse": 3.9776,
       "cv_type": "rolling_origin_5fold"
     }
   }
@@ -692,29 +692,28 @@ The platform runs an automated multi-model candidate tournament in `etl/retrain.
 
 | Architecture | Feature Set | Mean CV RMSE | Mean CV MAE | Pooled Out-of-Fold R² | Production Status |
 |--------------|:-----------:|:------------:|:-----------:|:---------------------:|:-----------------:|
-| **Ridge Scaled Pipeline** | **Set B (Weather + Day-of-Year)** | **4.03 kWh (≈4.0)** | **3.27 kWh (≈3.3)** | **0.49** (0.4889) | 🏆 **Active Production Champion** (56% error reduction vs baseline) |
-| **Huber Robust Pipeline** | Set B (Weather + Day-of-Year) | 4.04 kWh | 3.22 kWh | 0.49 (0.4860) | Evaluated (marginally lower MAE; Ridge chosen for stability) |
-| **ExtraTrees (300 trees)** | Set B (Weather + Day-of-Year) | 4.60 kWh | 3.94 kWh | 0.32 (0.3162) | Evaluated |
-| **XGBoost (depth=3)** | Set B (Weather + Day-of-Year) | 5.55 kWh | 4.63 kWh | -0.18 (-0.1771) | Evaluated |
-| **Ridge Scaled Pipeline** | Set D (Weather + Lag Features) | 3.46 kWh | 2.80 kWh | 0.65 (0.6517) | Optional Model (Requires Lags) |
-| **Baseline Persistence** | Yesterday's generation (`gen_lag1`) | 3.77 kWh | 2.75 kWh | 0.61 (0.6098) | Reference Only (Requires Past Actual) |
-| **Baseline Mean** | Training Window Mean | 8.32 kWh | 7.39 kWh | -0.90 (-0.9028) | Naive Baseline (Reference for 56% error reduction) |
+| **Ridge Scaled Pipeline** | **Set B (Weather + Day-of-Year)** | **3.98 kWh** | **3.24 kWh** | **0.51** (0.5075) | 🏆 **Active Production Champion** (56% error reduction vs baseline) |
+| **Huber Robust Pipeline** | Set B (Weather + Day-of-Year) | 4.06 kWh | 3.20 kWh | 0.49 (0.4859) | Evaluated (marginally lower MAE; Ridge chosen for R² and stability) |
+| **ExtraTrees (300 trees)** | Set B (Weather + Day-of-Year) | 4.56 kWh | 3.86 kWh | 0.33 (0.3267) | Evaluated |
+| **XGBoost (depth=3)** | Set B (Weather + Day-of-Year) | 5.54 kWh | 4.62 kWh | -0.16 (-0.1571) | Evaluated |
+| **Ridge Scaled Pipeline** | Set D (Weather + Lag Features) | 3.43 kWh | 2.82 kWh | 0.66 (0.6564) | Optional Model (Requires Lags) |
+| **Baseline Persistence** | Yesterday's generation (`gen_lag1`) | 3.66 kWh | 2.75 kWh | 0.61 (0.6098) | Reference Only (Requires Past Actual) |
+| **Baseline Mean** | Training Window Mean | 7.87 kWh | 7.39 kWh | -0.90 (-0.9028) | Naive Baseline (Reference for 56% error reduction) |
 
 - **Current Production Champion**: `Pipeline (StandardScaler → Ridge(alpha=3.0))`
-- **Production Selection Rationale**: Ridge on Feature Set B is selected because it is the **best weather-only model**, delivering 56% error reduction vs baseline mean across 50 unseen days without needing yesterday's measured output. While Huber achieves marginally lower MAE (3.22 vs 3.27 kWh), Ridge was chosen for its mathematical simplicity and parameter stability.
+- **Production Selection Rationale**: Ridge on Feature Set B is selected as the champion weather-only model, delivering the highest R² (0.51) and lowest RMSE (3.98 kWh) with 56% error reduction vs baseline mean across 50 unseen days without needing yesterday's measured output. While Huber achieves marginally lower MAE (3.20 vs 3.24 kWh), Ridge was chosen for its superior overall variance explained (R² 0.51 vs 0.49), parameter stability, and mathematical simplicity.
 - **Physical Output Guard**: Predictions bounded to $\ge 0.0$ kWh.
-- **Features in Production (10)**:
+- **Features in Production (9)**:
   1. `shortwave_radiation_sum`: Total daily global horizontal solar irradiance (W/m²)
   2. `sunshine_duration`: Daily duration of bright sunlight (seconds)
   3. `cloud_cover_mean`: Daily average percentage cloud cover (%)
   4. `temperature_2m_mean`: Daily mean 2-meter air temperature (°C)
   5. `wind_speed_10m_mean`: Daily mean 10-meter wind speed (m/s)
   6. `rain_sum`: Total daily precipitation (mm)
-  7. `is_weekend_enc`: Weekend binary flag (0=weekday, 1=weekend)
-  8. `sunshine_ratio`: $\text{sunshine\_duration} / \text{daylight\_duration}$ (bounded [0, 1])
-  9. `rad_clear`: $\text{shortwave\_radiation\_sum} \times (1 - \text{cloud\_cover\_mean}/100)$
-  10. `day_of_year`: Calendar day of year (1–366), capturing the seasonal sun angle trajectory
-  *(Note: `season_enc` was removed as all 91 historical days are in the Dry season).*
+  7. `sunshine_ratio`: $\text{sunshine\_duration} / \text{daylight\_duration}$ (bounded [0, 1])
+  8. `rad_clear`: $\text{shortwave\_radiation\_sum} \times (1 - \text{cloud\_cover\_mean}/100)$
+  9. `day_of_year`: Calendar day of year (1–366), capturing the seasonal sun angle trajectory
+  *(Note: `is_weekend_enc` was removed from the model as solar PV generation is physical, raising R² from 0.49 to 0.51 and lowering MAE to 3.24 kWh; `season_enc` was removed as all historical days are Dry season).*
 
 ### 🔹 Key Empirical Insights
 - **Strong Seasonal Trajectory**: Observed generation rises strongly across the observation period (averaging ~24.5 kWh in February, ~30.7 kWh in March, and ~38.8 kWh in April). Incorporating `day_of_year` allowed linear models to capture this upward trajectory without requiring lag features.
@@ -826,10 +825,10 @@ Excluded Anomalies:
 - **Current Data**: 89 clean daily records spanning 3 calendar months (February 2, 2026 – May 2, 2026).
 - **Lag Feature Availability**: For autoregressive models utilizing `gen_rolling7`, the first 7 days are required as seed, leaving 82–83 valid evaluation days.
 - **Evaluation Discipline**: Evaluated using 5-fold rolling-origin time-series cross-validation (`TimeSeriesSplit(n_splits=5, test_size=10)`). Production model (`Pipeline(StandardScaler → Ridge(alpha=3.0))` on Feature Set B) yields:
-  - **Mean CV RMSE**: 4.01 kWh
-  - **Mean CV MAE**: 3.17 kWh
-  - **Pooled R²**: 0.4993 (~0.50)
-- **Extrapolation Limitation of Tree Regressors**: Due to a prominent upward seasonal ramp (from ~24.5 kWh/day in Feb to ~38.8 kWh/day in Apr), tree-based regressors (RandomForest, ExtraTrees, GradientBoosting, XGBoost) fail to extrapolate outside the target range seen in each earlier training window, yielding lower CV R² scores (0.02 – 0.32). Regularized linear regression (Ridge) gracefully captures both the seasonal slope via `day_of_year` and shortwave radiation variations.
+  - **Mean CV RMSE**: 3.98 kWh
+  - **Mean CV MAE**: 3.24 kWh
+  - **Pooled R²**: 0.51 (0.5075)
+- **Extrapolation Limitation of Tree Regressors**: Due to a prominent upward seasonal ramp (from ~24.5 kWh/day in Feb to ~38.8 kWh/day in Apr), tree-based regressors (RandomForest, ExtraTrees, GradientBoosting, XGBoost) fail to extrapolate outside the target range seen in each earlier training window, yielding lower CV R² scores (-0.16 to 0.33). Regularized linear regression (Ridge) gracefully captures both the seasonal slope via `day_of_year` and shortwave radiation variations.
 
 #### 📅 Seasonal Coverage Limitation
 - **Single Season**: All 89 records belong exclusively to the dry season (Nov–Apr calendar window).
@@ -840,7 +839,7 @@ Excluded Anomalies:
 - **Runtime Mitigation**: The `/predict` API warns consumers when `season="Wet"` is submitted, clearly indicating that the model was trained exclusively on dry season data.
 
 #### 🎯 Model Scope Constraints
-- **Zero-Lag Weather API vs. Autoregressive Monitoring**: Feature Set B is designed for external forecasting where past inverter generation may not be available at runtime. When yesterday's generation is available (Feature Set D), autoregressive Ridge achieves CV RMSE of 3.46 kWh and pooled R² of 0.6517.
+- **Zero-Lag Weather API vs. Autoregressive Monitoring**: Feature Set B is designed for external forecasting where past inverter generation may not be available at runtime. When yesterday's generation is available (Feature Set D), autoregressive Ridge achieves CV RMSE of 3.43 kWh, CV MAE of 2.82 kWh, and pooled R² of 0.6564.
 - **Missing Predictors**:
   - Inverter clipping thresholds and panel degradation
   - Panel orientation / tilt / azimuth
@@ -866,29 +865,28 @@ Excluded Anomalies:
 
 | Model Architecture | Feature Set | Rows Used | CV RMSE (kWh) | CV MAE (kWh) | Pooled R² | Production Status |
 |--------------------|-------------|-----------|---------------|--------------|-----------|-------------------|
-| **Pipeline(StandardScaler → Ridge, α=3.0)** | **Set B (Weather + DOY)** | **82 (50 test)** | **4.03 (≈4.0)** | **3.27 (≈3.3)** | **0.49** | **Active Production Champion (56% error reduction)** |
-| HuberRegressor Pipeline | Set B (Weather + DOY) | 82 (50 test) | 4.04 | 3.22 | 0.49 | Evaluated (marginally lower MAE; Ridge chosen for stability) |
-| ExtraTreesRegressor(300 trees) | Set B (Weather + DOY) | 82 (50 test) | 4.60 | 3.94 | 0.32 | Benchmark (Tree Ensembles) |
-| XGBRegressor(max_depth=3) | Set B (Weather + DOY) | 82 (50 test) | 5.55 | 4.63 | -0.18 | Benchmark (Gradient Boosting) |
-| Pipeline(StandardScaler → Ridge, α=10.0) | Set D (Set B + Lag1 + Rolling7) | 82 (50 test) | 3.46 | 2.80 | 0.65 | Candidate (Requires Lag) |
-| Persistence Baseline (`gen_lag1`) | gen_lag1 | 82 (50 test) | 3.77 | 2.75 | 0.61 | Reference Only (Requires Lag) |
-| Baseline (Training Window Mean) | None | 82 (50 test) | 8.32 | 7.39 | -0.90 | Reference Baseline for Error Reduction |
+| **Pipeline(StandardScaler → Ridge, α=3.0)** | **Set B (9 Weather + DOY)** | **82 (50 test)** | **3.98** | **3.24** | **0.51** | **Active Production Champion (56% error reduction)** |
+| HuberRegressor Pipeline | Set B (9 Weather + DOY) | 82 (50 test) | 4.06 | 3.20 | 0.49 | Evaluated (marginally lower MAE; Ridge chosen for R² and stability) |
+| ExtraTreesRegressor(300 trees) | Set B (9 Weather + DOY) | 82 (50 test) | 4.56 | 3.86 | 0.33 | Benchmark (Tree Ensembles) |
+| XGBRegressor(max_depth=3) | Set B (9 Weather + DOY) | 82 (50 test) | 5.54 | 4.62 | -0.16 | Benchmark (Gradient Boosting) |
+| Pipeline(StandardScaler → Ridge, α=3.0) | Set B + `gen_lag1` | 82 (50 test) | 3.43 | 2.82 | 0.66 | Candidate (Requires Yesterday Output) |
+| Persistence Baseline (`gen_lag1`) | gen_lag1 | 82 (50 test) | 3.66 | 2.75 | 0.61 | Reference Only (Requires Lag) |
+| Baseline (Training Window Mean) | None | 82 (50 test) | 7.87 | 7.39 | -0.90 | Reference Baseline for Error Reduction |
 
 > **Sample Count Consistency Note:**
-> - **Daily Dataset**: 91 raw rows total. 2 documented anomaly days excluded (`2026-02-01` partial 8h recording, `2026-03-31` severe grid outage), leaving **89 clean daily rows** used for final training.
-> - **Rolling Validation (5 Folds × 10 Days)**: Evaluates **50 unseen test days** across expanding windows. Rows with a full 7-day prior lag history (`gen_rolling7`) yield 82 common evaluation rows.
-> - **Roadmap "86 Usable" Note**: In `fact_solar_hourly.csv`, exactly 86 days contain a complete 24-hour cycle (the remaining 5 days have partial hourly collections). Daily modeling aggregates full clean daily energy, retaining all 89 clean days.
+> - **Consistent Summary**: 91 raw rows, 2 anomaly days excluded, 89 clean rows used for final training. Validation uses 82 rows after the 7-day warm-up (evaluating 50 unseen test days across 5 expanding-window folds).
+> - **Roadmap "86 Usable" Origin**: In `fact_solar_hourly.csv`, exactly 86 days contain a complete 24-hour cycle (the remaining 5 days have partial hourly collections). Daily modeling aggregates full clean daily energy, retaining all 89 clean days.
 
 ### 🔹 Feature Ablation Analysis (Ridge α=3.0 on 5 Rolling Folds)
 
-Incremental ablation adding features in ordered steps (detailed in `reports/feature_ablation.csv`):
+Incremental ablation adding features in ordered steps (evaluated across 50 unseen validation days):
 
 | Step | Features Added | N Feats | CV MAE (kWh) | CV RMSE (kWh) | Pooled R² | Key Observation |
 |---|---|---|---|---|---|---|
-| **Step 1** | 7 raw inputs (6 weather + `is_weekend_enc`) | 7 | 5.15 | 6.04 | -0.1853 | Fails to track seasonal generation rise |
-| **Step 2** | + `day_of_year` | 8 | 3.79 | 4.60 | 0.3283 | Major jump; captures seasonal elevation |
-| **Step 3** | + `sunshine_ratio` | 9 | 3.25 | 4.09 | 0.4680 | Captures clear sky sun exposure efficiency |
-| **Step 4** | + `rad_clear` | 10 | 3.27 | 4.03 | 0.4889 | Full Set B; best zero-lag error profile |
+| **Step 1** | 6 weather inputs only | 6 | 5.15 | 6.00 | -0.1682 | Fails to track upward seasonal generation trajectory |
+| **Step 2** | + `day_of_year` | 7 | 3.71 | 4.52 | 0.3515 | Major accuracy boost; captures seasonal solar elevation |
+| **Step 3** | + `sunshine_ratio` | 8 | 3.24 | 4.03 | 0.4869 | Accounts for daily clear-sky sunlight efficiency |
+| **Step 4** | + `rad_clear` | 9 | 3.24 | 3.98 | 0.5075 | Full 9-feature model; best overall variance explained |
 
 ---
 

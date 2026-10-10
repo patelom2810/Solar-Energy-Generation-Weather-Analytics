@@ -13,7 +13,6 @@ FEATURE_NAMES: List[str] = [
     'temperature_2m_mean',
     'wind_speed_10m_mean',
     'rain_sum',
-    'is_weekend_enc',
     'sunshine_ratio',
     'rad_clear',
     'day_of_year',
@@ -29,7 +28,6 @@ FEATURE_SET_A = [
     'temperature_2m_mean',
     'wind_speed_10m_mean',
     'rain_sum',
-    'is_weekend_enc',
     'sunshine_ratio',
     'rad_clear',
 ]

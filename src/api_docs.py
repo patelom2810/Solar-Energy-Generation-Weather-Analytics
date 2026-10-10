@@ -89,7 +89,7 @@ API_DOCS = {
                             "schema": {
                                 "type": "object",
                                 "required": ["shortwave_radiation_sum", "sunshine_duration", "cloud_cover_mean",
-                                           "temperature_2m_mean", "wind_speed_10m_mean", "rain_sum", "season", "is_weekend"],
+                                           "temperature_2m_mean", "wind_speed_10m_mean", "rain_sum", "season"],
                                 "properties": {
                                     "shortwave_radiation_sum": {
                                         "type": "number",
@@ -129,7 +129,7 @@ API_DOCS = {
                                     },
                                     "is_weekend": {
                                         "type": "boolean",
-                                        "description": "Is weekend",
+                                        "description": "Optional flag (legacy / ignored by 9-feature production model)",
                                         "example": False
                                     }
                                 }

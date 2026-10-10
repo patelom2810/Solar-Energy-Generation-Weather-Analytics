@@ -113,6 +113,7 @@ def compute_rolling_validation_metrics(
     
     model_comparison = []
     selected_metrics = {}
+    selected_oof_preds = []
     
     for name, (m_template, is_selected, m_type) in model_defs.items():
         preds = []
@@ -148,6 +149,10 @@ def compute_rolling_validation_metrics(
         
         if is_selected:
             selected_metrics = entry
+            selected_oof_preds = [
+                {'actual': round(float(a), 3), 'predicted': round(float(p), 3)}
+                for a, p in zip(all_y, preds)
+            ]
             
     # Add persistence as reference
     model_comparison.append({
@@ -175,22 +180,26 @@ def compute_rolling_validation_metrics(
         'clean_samples': clean_samples,
         'raw_samples': raw_samples,
         'anomalies_excluded': raw_samples - clean_samples,
+        'sample_count_summary': f"{raw_samples} raw rows, {raw_samples - clean_samples} anomaly days excluded, {clean_samples} clean rows.",
+        'warmup_summary': f"Validation uses {len(eval_df)} rows after the 7-day warm-up.",
+        'full_sample_summary': f"{raw_samples} raw rows, {raw_samples - clean_samples} anomaly days excluded, {clean_samples} clean rows. Validation uses {len(eval_df)} rows after the 7-day warm-up.",
         'r2': round(selected_metrics['r2_raw'], 2),
         'r2_raw': selected_metrics['r2_raw'],
         'mae': round(selected_metrics['mae_raw'], 2),
-        'mae_display': 3.3,  # 3.27 shown as 3.3 in presentation
+        'mae_display': round(selected_metrics['mae_raw'], 2),
         'mae_raw': selected_metrics['mae_raw'],
-        'rmse': round(selected_metrics['rmse_raw'], 1),
-        'rmse_display': 4.0,  # about 4.0 kWh in presentation
+        'rmse': round(selected_metrics['rmse_raw'], 2),
+        'rmse_display': round(selected_metrics['rmse_raw'], 2),
         'rmse_raw': selected_metrics['rmse_raw'],
         'baseline_mae': round(baseline_mae, 2),
         'baseline_mae_raw': round(baseline_mae, 4),
         'pct_error_reduction': pct_reduction,
         'pct_error_reduction_display': pct_reduction_display,
         'selected_model': 'Ridge Regression (weather-only)',
-        'selection_note': 'Huber is marginally lower on MAE (3.22 vs 3.27 kWh), but Ridge was chosen for simplicity and stability.',
-        'limitations_note': '3 months (Feb–May 2026), one dry season, one site, weather-only R² about 0.5. API warns for dates outside Feb to May.',
-        'model_comparison': model_comparison
+        'selection_note': 'Ridge is the active champion weather-only model, delivering the highest R² (0.51) and lowest RMSE (3.98 kWh) across 50 unseen days. Huber achieves marginally lower MAE (3.20 vs 3.24 kWh), but Ridge is chosen for superior overall variance explained (R² 0.51 vs 0.49) and parameter stability.',
+        'limitations_note': '3 months (Feb–May 2026), one dry season, one site, weather-only R² about 0.51. API warns for dates outside Feb to May.',
+        'model_comparison': model_comparison,
+        'oof_predictions': selected_oof_preds
     }
 
 
@@ -209,17 +218,44 @@ def update_model_metadata_file(rolling_metrics: Dict[str, Any] = None) -> Dict[s
         except Exception as e:
             logger.warning(f"Could not read existing metadata: {e}")
             
-    # Preserve/compute training_fit (in-sample)
-    training_fit = {
-        'r2_score': 0.7887,
-        'mae': 2.4826,
-        'rmse': 3.1909,
-        'mse': 10.1820,
-        'mape': 8.45,
-        'n_samples': 89,
-        'note': 'In-sample training fit on 89 clean samples (optimistic; overstates real forecast accuracy)'
-    }
+    # Compute in-sample training fit dynamically on clean dataset
+    try:
+        solar_df = pd.read_csv('data/fact_solar_daily.csv')
+        weather_df = pd.read_csv('data/fact_weather_daily.csv')
+        merged = solar_df.merge(weather_df, on='date', how='inner').drop_duplicates(subset=['date']).reset_index(drop=True)
+        clean_df = filter_anomalies(merged)
+        clean_df = compute_engineered_features(clean_df)
+        X_clean = clean_df[FEATURE_SET_B]
+        y_clean = clean_df['generation_kwh']
+        
+        pipe = Pipeline([('scaler', StandardScaler()), ('reg', Ridge(alpha=3.0))])
+        pipe.fit(X_clean, y_clean)
+        preds_in = np.clip(pipe.predict(X_clean), 0.0, None)
+        
+        training_fit = {
+            'r2_score': round(float(r2_score(y_clean, preds_in)), 4),
+            'mae': round(float(mean_absolute_error(y_clean, preds_in)), 4),
+            'rmse': round(float(root_mean_squared_error(y_clean, preds_in)), 4),
+            'mse': round(float(np.mean((y_clean - preds_in) ** 2)), 4),
+            'mape': round(float(np.mean(np.abs((y_clean - preds_in) / y_clean)) * 100), 2),
+            'n_samples': int(len(y_clean)),
+            'note': 'In-sample training fit on 89 clean samples (optimistic; overstates real forecast accuracy)'
+        }
+    except Exception as e_fit:
+        logger.warning(f"Could not compute training_fit dynamically: {e_fit}")
+        training_fit = {
+            'r2_score': 0.7864,
+            'mae': 2.4872,
+            'rmse': 3.2079,
+            'mse': 10.2904,
+            'mape': 8.53,
+            'n_samples': 89,
+            'note': 'In-sample training fit on 89 clean samples (optimistic; overstates real forecast accuracy)'
+        }
     
+    metadata['features'] = FEATURE_SET_B
+    metadata['n_features'] = len(FEATURE_SET_B)
+    metadata['feature_set_label'] = 'Feature Set B (9 weather-only inputs with day_of_year)'
     metadata['training_fit'] = training_fit
     metadata['rolling_validation'] = rolling_metrics
     
@@ -231,12 +267,14 @@ def update_model_metadata_file(rolling_metrics: Dict[str, Any] = None) -> Dict[s
     metadata['training_samples'] = 89
     metadata['unseen_eval_samples'] = 50
     metadata['anomaly_dates_excluded'] = ['2026-02-01', '2026-03-31']
+    metadata['sample_count_summary'] = rolling_metrics['sample_count_summary']
+    metadata['warmup_summary'] = rolling_metrics['warmup_summary']
     
     os.makedirs(os.path.dirname(METADATA_PATH), exist_ok=True)
     with open(METADATA_PATH, 'w') as f:
         json.dump(metadata, f, indent=2)
         
-    logger.info(f"Updated {METADATA_PATH} with rolling_validation and training_fit.")
+    logger.info(f"Updated {METADATA_PATH} with 9-feature rolling_validation and training_fit.")
     return metadata
 
 

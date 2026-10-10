@@ -193,9 +193,10 @@
                 <div class="kpi-value" id="kpiTemperature">-</div>
                 <div class="kpi-change" id="kpiTemperatureChange">-</div>
             </div>
-            <div class="kpi-card">
+            <div class="kpi-card" title="Logged API predictions (demo and test calls included)">
                 <div class="kpi-header"><div class="kpi-title">Predictions</div><div class="kpi-icon"><i class="fas fa-star"></i></div></div>
                 <div class="kpi-value" id="kpiPredictions">-</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: -4px; margin-bottom: 8px;">Logged API predictions (demo and test calls included)</div>
                 <div style="display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 2;">
                     <div class="kpi-change" id="kpiPredictionsChange">-</div>
                     <a href="/" style="background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan)); color: white; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; text-decoration: none; box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3); transition: transform 0.2s;">
@@ -246,7 +247,7 @@
                 </div>
                 <div style="font-size:12px; color:var(--text-muted); display:flex; gap:16px; flex-wrap:wrap; font-weight:500;">
                     <span><i class="fas fa-layer-group" style="color:var(--accent-blue);"></i> 5 folds × 10 test days (expanding window)</span>
-                    <span><i class="fas fa-database" style="color:var(--success);"></i> 89 clean rows used (91 raw − 2 anomaly dates)</span>
+                    <span><i class="fas fa-database" style="color:var(--success);"></i> 91 raw rows, 2 anomaly days excluded, 89 clean rows. Validation uses 82 rows after the 7-day warm-up.</span>
                 </div>
             </div>
 
@@ -254,17 +255,17 @@
             <div class="model-score-grid">
                 <div class="score-card" id="ms_r2_card">
                     <div class="score-card-label">R² on Unseen Days</div>
-                    <div class="score-card-value" id="msR2">0.49</div>
+                    <div class="score-card-value" id="msR2">0.51</div>
                     <div class="score-card-unit" id="msR2Unit">About half of day-to-day variation is explained.</div>
                 </div>
                 <div class="score-card">
                     <div class="score-card-label">MAE</div>
-                    <div class="score-card-value" id="msMAE">3.3 kWh</div>
+                    <div class="score-card-value" id="msMAE">3.24 kWh</div>
                     <div class="score-card-unit">kWh mean error across unseen test blocks</div>
                 </div>
                 <div class="score-card">
                     <div class="score-card-label">RMSE</div>
-                    <div class="score-card-value" id="msRMSE">4.0 kWh</div>
+                    <div class="score-card-value" id="msRMSE">3.98 kWh</div>
                     <div class="score-card-unit">kWh root mean sq error (mean fold)</div>
                 </div>
                 <div class="score-card">
@@ -296,45 +297,45 @@
                         <tbody id="modelComparisonBody">
                             <tr class="selected-row">
                                 <td><strong>Ridge Regression (weather-only)</strong></td>
-                                <td style="text-align:center;">0.49</td>
-                                <td style="text-align:center;"><strong>3.27</strong></td>
-                                <td style="text-align:center;">4.03</td>
+                                <td style="text-align:center;">0.51</td>
+                                <td style="text-align:center;"><strong>3.24</strong></td>
+                                <td style="text-align:center;">3.98</td>
                                 <td style="text-align:center;"><span class="badge-selected"><i class="fas fa-check-circle"></i> Selected Champion</span></td>
                             </tr>
                             <tr>
                                 <td>Huber Regression</td>
                                 <td style="text-align:center;">0.49</td>
-                                <td style="text-align:center;">3.22</td>
-                                <td style="text-align:center;">4.04</td>
+                                <td style="text-align:center;">3.20</td>
+                                <td style="text-align:center;">4.06</td>
                                 <td style="text-align:center;"><span style="font-size:11px; color:var(--text-muted);">Evaluated</span></td>
                             </tr>
                             <tr>
                                 <td>Extra Trees</td>
-                                <td style="text-align:center;">0.32</td>
-                                <td style="text-align:center;">3.94</td>
-                                <td style="text-align:center;">4.60</td>
+                                <td style="text-align:center;">0.33</td>
+                                <td style="text-align:center;">3.86</td>
+                                <td style="text-align:center;">4.56</td>
                                 <td style="text-align:center;"><span style="font-size:11px; color:var(--text-muted);">Evaluated</span></td>
                             </tr>
                             <tr>
                                 <td>XGBoost depth 3</td>
-                                <td style="text-align:center;">-0.18</td>
-                                <td style="text-align:center;">4.63</td>
-                                <td style="text-align:center;">5.55</td>
+                                <td style="text-align:center;">-0.16</td>
+                                <td style="text-align:center;">4.62</td>
+                                <td style="text-align:center;">5.54</td>
                                 <td style="text-align:center;"><span style="font-size:11px; color:var(--text-muted);">Evaluated</span></td>
                             </tr>
                             <tr style="opacity:0.85; background:rgba(0,0,0,0.015);">
                                 <td><em>Persistence baseline (yesterday's output)</em></td>
                                 <td style="text-align:center;">0.61</td>
                                 <td style="text-align:center;">2.75</td>
-                                <td style="text-align:center;">3.77</td>
+                                <td style="text-align:center;">3.66</td>
                                 <td style="text-align:center;"><span class="badge-ref"><i class="fas fa-history"></i> Reference only (requires past actual)</span></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
-                <p style="font-size:12px; color:var(--text-muted); margin-top:10px; line-height:1.45;">
+                <p style="font-size:12px; color:var(--text-muted); margin-top:10px; line-height:1.45;" id="msSelectionRationale">
                     <i class="fas fa-info-circle" style="color:var(--accent-cyan);"></i>
-                    <strong>Selection rationale:</strong> Huber Regression is marginally lower on MAE (3.22 vs 3.27 kWh), but Ridge Regression was chosen for simplicity, parameter stability, and consistent zero-lag inference without requiring yesterday's measured output.
+                    <strong>Selection rationale:</strong> Ridge Regression is the active champion weather-only model, delivering the highest R² (0.51) and lowest RMSE (3.98 kWh) across 50 unseen days. Huber achieves marginally lower MAE (3.20 vs 3.24 kWh), but Ridge is chosen for superior overall variance explained (R² 0.51 vs 0.49) and parameter stability.
                 </p>
             </div>
 
@@ -344,7 +345,7 @@
                     <i class="fas fa-exclamation-triangle"></i> Evaluation Scope & Model Limitations
                 </div>
                 <p style="color:var(--text-muted); margin:0; line-height:1.5;">
-                    3 months of observations (Feb–May 2026), one dry season regime, single installation site. Weather-only R² is about 0.5 (about half of day-to-day variation is explained). The API issues extrapolation warnings for dates outside Feb to May.
+                    3 months of observations (Feb–May 2026), one dry season regime, single installation site. Weather-only R² is about 0.51 (about half of day-to-day variation is explained). The API issues extrapolation warnings for dates outside Feb to May.
                 </p>
             </div>
 
@@ -355,39 +356,39 @@
                         <i class="fas fa-flask" style="color:var(--text-muted);"></i> Training Fit (In-Sample, Optimistic)
                     </div>
                     <div style="font-size:11px; color:var(--text-muted); font-style:italic;">
-                        Model scored on the same 89 training rows — shown for comparison only, overstates real forecasting accuracy
+                        Model scored on the same 89 training rows — shown for comparison only, overstates real forecasting accuracy (91 raw rows, 2 anomaly days excluded, 89 clean rows.)
                     </div>
                 </div>
                 <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:12px; text-align:center;">
                     <div style="background:rgba(255,255,255,0.6); padding:12px 10px; border-radius:12px; border:1px solid rgba(0,0,0,0.05);">
                         <div style="font-size:11px; color:var(--text-muted); font-weight:700; margin-bottom:4px;">In-Sample R²</div>
-                        <div style="font-size:20px; font-weight:800; color:var(--text-main);" id="msTrainR2">0.7887</div>
+                        <div style="font-size:20px; font-weight:800; color:var(--text-main);" id="msTrainR2">0.7864</div>
                         <div style="font-size:11px; color:var(--text-muted);">fit score</div>
                     </div>
                     <div style="background:rgba(255,255,255,0.6); padding:12px 10px; border-radius:12px; border:1px solid rgba(0,0,0,0.05);">
                         <div style="font-size:11px; color:var(--text-muted); font-weight:700; margin-bottom:4px;">In-Sample MAE</div>
-                        <div style="font-size:20px; font-weight:800; color:var(--text-main);" id="msTrainMAE">2.48 kWh</div>
+                        <div style="font-size:20px; font-weight:800; color:var(--text-main);" id="msTrainMAE">2.49 kWh</div>
                         <div style="font-size:11px; color:var(--text-muted);">mean abs error</div>
                     </div>
                     <div style="background:rgba(255,255,255,0.6); padding:12px 10px; border-radius:12px; border:1px solid rgba(0,0,0,0.05);">
                         <div style="font-size:11px; color:var(--text-muted); font-weight:700; margin-bottom:4px;">In-Sample RMSE</div>
-                        <div style="font-size:20px; font-weight:800; color:var(--text-main);" id="msTrainRMSE">3.19 kWh</div>
+                        <div style="font-size:20px; font-weight:800; color:var(--text-main);" id="msTrainRMSE">3.21 kWh</div>
                         <div style="font-size:11px; color:var(--text-muted);">root mean sq error</div>
                     </div>
                     <div style="background:rgba(255,255,255,0.6); padding:12px 10px; border-radius:12px; border:1px solid rgba(0,0,0,0.05);">
                         <div style="font-size:11px; color:var(--text-muted); font-weight:700; margin-bottom:4px;">In-Sample MSE</div>
-                        <div style="font-size:20px; font-weight:800; color:var(--text-main);" id="msTrainMSE">10.18</div>
+                        <div style="font-size:20px; font-weight:800; color:var(--text-main);" id="msTrainMSE">10.29</div>
                         <div style="font-size:11px; color:var(--text-muted);">kWh sq error</div>
                     </div>
                     <div style="background:rgba(255,255,255,0.6); padding:12px 10px; border-radius:12px; border:1px solid rgba(0,0,0,0.05);">
                         <div style="font-size:11px; color:var(--text-muted); font-weight:700; margin-bottom:4px;">In-Sample MAPE</div>
-                        <div style="font-size:20px; font-weight:800; color:var(--text-main);" id="msTrainMAPE">8.45%</div>
+                        <div style="font-size:20px; font-weight:800; color:var(--text-main);" id="msTrainMAPE">8.53%</div>
                         <div style="font-size:11px; color:var(--text-muted);">error rate</div>
                     </div>
                     <div style="background:rgba(255,255,255,0.6); padding:12px 10px; border-radius:12px; border:1px solid rgba(0,0,0,0.05);">
                         <div style="font-size:11px; color:var(--text-muted); font-weight:700; margin-bottom:4px;">Clean Samples</div>
                         <div style="font-size:20px; font-weight:800; color:var(--text-main);" id="msTrainN">89</div>
-                        <div style="font-size:11px; color:var(--text-muted);">clean rows (91 − 2)</div>
+                        <div style="font-size:11px; color:var(--text-muted);">91 raw − 2 anomaly</div>
                     </div>
                 </div>
             </div>
@@ -395,11 +396,23 @@
             <!-- Visual Charts: Feature Importances and Actual vs Predicted -->
             <div class="model-charts-row">
                 <div class="model-chart-box">
-                    <h4><i class="fas fa-sort-amount-down" style="color:var(--accent-cyan)"></i> Feature Importances</h4>
+                    <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:6px;">
+                        <h4><i class="fas fa-sort-amount-down" style="color:var(--accent-cyan)"></i> Feature Importances</h4>
+                        <span style="font-size:11px; color:var(--text-muted); font-weight:600;">Standardized Ridge Coefficients (Normalized to 100%)</span>
+                    </div>
+                    <div style="font-size:11.5px; color:var(--text-muted); margin:-2px 0 10px 0; line-height:1.4;">
+                        Importance is shared among correlated radiation and sunshine features. It shows how the model splits weight, not each feature's added accuracy.
+                    </div>
                     <div class="fi-bar-wrap" id="fiBars"></div>
                 </div>
                 <div class="model-chart-box">
-                    <h4><i class="fas fa-bullseye" style="color:var(--success)"></i> Actual vs Predicted</h4>
+                    <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:6px;">
+                        <h4><i class="fas fa-bullseye" style="color:var(--success)"></i> Actual vs Predicted (unseen validation days)</h4>
+                        <span style="font-size:11px; color:var(--text-muted); font-weight:600;">50 Out-of-Fold Days</span>
+                    </div>
+                    <div style="font-size:11.5px; color:var(--text-muted); margin:-2px 0 10px 0;">
+                        50 unseen out-of-sample test days evaluated across 5 expanding-window folds
+                    </div>
                     <div style="height:250px;"><canvas id="avpChart"></canvas></div>
                 </div>
             </div>
@@ -704,11 +717,11 @@
                 }
 
                 // 2. Secondary In-Sample Training Fit Metrics
-                const trR2 = train.r2_score !== undefined ? train.r2_score : 0.7887;
-                const trMAE = train.mae !== undefined ? train.mae : 2.4826;
-                const trRMSE = train.rmse !== undefined ? train.rmse : 3.1909;
-                const trMSE = train.mse !== undefined ? train.mse : 10.1820;
-                const trMAPE = train.mape !== undefined ? train.mape : 8.45;
+                const trR2 = train.r2_score !== undefined ? train.r2_score : 0.7864;
+                const trMAE = train.mae !== undefined ? train.mae : 2.4872;
+                const trRMSE = train.rmse !== undefined ? train.rmse : 3.2079;
+                const trMSE = train.mse !== undefined ? train.mse : 10.2904;
+                const trMAPE = train.mape !== undefined ? train.mape : 8.53;
                 const trN = train.n_samples !== undefined ? train.n_samples : 89;
 
                 const trR2El = document.getElementById('msTrainR2');
@@ -749,6 +762,11 @@
                     }).join('');
                 }
 
+                const ratEl = document.getElementById('msSelectionRationale');
+                if (ratEl && (data.selection_note || roll.selection_note)) {
+                    ratEl.innerHTML = `<i class="fas fa-info-circle" style="color:var(--accent-cyan);"></i> <strong>Selection rationale:</strong> ${data.selection_note || roll.selection_note}`;
+                }
+
                 // 4. Feature Importance Bars
                 const fi   = data.feature_importances || {};
                 const keys = Object.keys(fi);
@@ -770,7 +788,7 @@
                     }
                 }
 
-                // 5. Actual vs Predicted Scatter Chart
+                // 5. Actual vs Predicted Scatter Chart (50 unseen validation days)
                 const avp = data.predictions_vs_actual || [];
                 if (avp.length > 0) {
                     if (window._avpChart) window._avpChart.destroy();
@@ -782,14 +800,14 @@
                         data: {
                             datasets: [
                                 {
-                                    label: 'Predicted vs Actual (Recent Window)',
+                                    label: 'Predicted vs Actual (50 unseen validation days)',
                                     data: avp.map(p => ({x: p.actual, y: p.predicted})),
                                     backgroundColor: 'rgba(14,165,233,0.55)',
                                     borderColor: '#0ea5e9',
                                     pointRadius: 5
                                 },
                                 {
-                                    label: 'Perfect fit reference',
+                                    label: 'Perfect fit reference (y = x)',
                                     data: [{x:minV,y:minV},{x:maxV2,y:maxV2}],
                                     type: 'line',
                                     borderColor: '#10b981',
@@ -805,8 +823,8 @@
                             maintainAspectRatio: false,
                             plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
                             scales: {
-                                x: { title: { display: true, text: 'Actual (kWh)', font:{size:11} } },
-                                y: { title: { display: true, text: 'Predicted (kWh)', font:{size:11} } }
+                                x: { title: { display: true, text: 'Actual Generation (kWh)', font:{size:11} } },
+                                y: { title: { display: true, text: 'Predicted Generation (kWh)', font:{size:11} } }
                             }
                         }
                     });
